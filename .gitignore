@@ -1,0 +1,16 @@
+.env
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+media/
+uploads/
+documents/*.pdf
+*.sqlite3
+
+.coverage
+htmlcov/
+.pytest_cache/
+
+.gitignore_artifacts/

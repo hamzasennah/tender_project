@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1,
+    "type": "factual_date",
+    "question": "Quelle est la date limite de dépôt des offres ?",
+    "expected": "28 septembre 2018 à 17h"
+  },
+  {
+    "id": 2,
+    "type": "duration",
+    "question": "Quelle est la durée de validité des offres ?",
+    "expected": "60 jours"
+  },
+  {
+    "id": 3,
+    "type": "percentage",
+    "question": "Quel est le montant de la garantie d'offre exigée ?",
+    "expected": "3 % de la valeur totale estimée du marché"
+  },
+  {
+    "id": 4,
+    "type": "comparison",
+    "question": "Quelle est la différence entre la garantie d'offre et la garantie de bonne exécution dans ce marché ?"
+  },
+  {
+    "id": 5,
+    "type": "global_synthesis",
+    "question": "Quelles sont les principales étapes du processus d'appel d'offres décrites dans ce document, depuis la préparation des offres jusqu'à l'attribution du marché ?"
+  },
+  {
+    "id": 6,
+    "type": "unanswerable",
+    "question": "Quel est le nom du directeur financier responsable de ce marché ?",
+    "expected": "Information not found in the provided document."
+  },
+  {
+    "id": 7,
+    "type": "multi_query",
+    "question": "Quelle est la date limite de dépôt des offres, quelle est la durée de validité des offres et quel est le montant de la garantie d'offre exigée ?"
+  },
+  {
+    "id": 8,
+    "type": "synthesis",
+    "question": "Résume les principales obligations du soumissionnaire avant le dépôt de son offre."
+  }
+]
