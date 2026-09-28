@@ -21,6 +21,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
+from extraction.services.rag import LLMProviderError, get_llm_provider
+
 
 if "testserver" not in settings.ALLOWED_HOSTS:
     settings.ALLOWED_HOSTS.append("testserver")
@@ -36,6 +38,13 @@ TOP_K = int(os.getenv("BENCHMARK_TOP_K", "5"))
 DELAY_SECONDS = float(os.getenv("BENCHMARK_DELAY_SECONDS", "3"))
 MAX_ATTEMPTS = max(1, int(os.getenv("BENCHMARK_MAX_RETRIES", "3")))
 RETRY_BACKOFF_SECONDS = float(os.getenv("BENCHMARK_RETRY_BACKOFF_SECONDS", "5"))
+PREFLIGHT_MAX_ATTEMPTS = max(
+    1,
+    int(os.getenv("BENCHMARK_PREFLIGHT_MAX_RETRIES", "3")),
+)
+PREFLIGHT_BACKOFF_SECONDS = float(
+    os.getenv("BENCHMARK_PREFLIGHT_BACKOFF_SECONDS", "5")
+)
 
 QUESTIONS_FILE = Path(__file__).parent / "questions.json"
 RESULTS_FILE = Path(__file__).parent / "results_final.json"
@@ -107,6 +116,63 @@ def error_message(payload):
 def provider_incident_results_file():
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     return Path(__file__).parent / f"results_provider_incident_{timestamp}.json"
+
+
+def provider_preflight_once(llm_provider=None):
+    provider = llm_provider or get_llm_provider()
+    try:
+        provider.generate_answer(
+            "Provider preflight check. Reply with exactly: OK",
+            "Preflight context: OK",
+        )
+    except LLMProviderError as exc:
+        return {
+            "http_status": exc.response_status,
+            "error_code": exc.code,
+            "error_message": exc.public_message,
+        }
+    except TimeoutError as exc:
+        return {
+            "http_status": 503,
+            "error_code": "llm_timeout",
+            "error_message": str(exc) or exc.__class__.__name__,
+        }
+    except Exception as exc:
+        return {
+            "http_status": 502,
+            "error_code": "provider_preflight_failed",
+            "error_message": str(exc) or exc.__class__.__name__,
+        }
+
+    return {
+        "http_status": 200,
+        "error_code": None,
+        "error_message": None,
+    }
+
+
+def provider_preflight(llm_provider=None):
+    attempts = []
+    for attempt in range(1, PREFLIGHT_MAX_ATTEMPTS + 1):
+        result = provider_preflight_once(llm_provider=llm_provider)
+        result["attempt"] = attempt
+        attempts.append(result)
+
+        status = result["http_status"]
+        if status not in TRANSIENT_HTTP_STATUSES:
+            return result, attempts
+        if attempt >= PREFLIGHT_MAX_ATTEMPTS:
+            return result, attempts
+
+        delay = PREFLIGHT_BACKOFF_SECONDS * (2 ** (attempt - 1))
+        print(
+            "Provider preflight transient failure "
+            f"HTTP {status}; retrying in {delay} s "
+            f"(attempt {attempt + 1}/{PREFLIGHT_MAX_ATTEMPTS})"
+        )
+        time.sleep(delay)
+
+    return attempts[-1], attempts
 
 
 def ask_endpoint_once(client, endpoint, question):
@@ -372,7 +438,25 @@ def main():
     print(f"Results file on full success: {RESULTS_FILE}")
     print(f"Delay between calls: {DELAY_SECONDS} s")
     print(f"Max attempts for 429/503: {MAX_ATTEMPTS}")
+    print(f"Provider preflight max attempts: {PREFLIGHT_MAX_ATTEMPTS}")
     print("=" * 80)
+
+    preflight_result, preflight_attempts = provider_preflight()
+    if preflight_result["http_status"] != 200:
+        print(
+            "Provider preflight failed: "
+            f"HTTP {preflight_result['http_status']}"
+        )
+        if preflight_result.get("error_code"):
+            print(f"Error code: {preflight_result['error_code']}")
+        if preflight_result.get("error_message"):
+            print(f"Error message: {preflight_result['error_message']}")
+        print(f"Preflight attempts: {len(preflight_attempts)}")
+        print("Benchmark aborted before execution.")
+        print("No scientific result generated.")
+        return
+
+    print(f"Provider preflight OK after {len(preflight_attempts)} attempt(s).")
 
     total_expected_calls = len(questions) * len(APPROACHES)
     call_index = 0
