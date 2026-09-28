@@ -7,6 +7,7 @@ __pycache__/
 media/
 uploads/
 documents/*.pdf
+benchmark/results_provider_incident_*.json
 *.sqlite3
 
 .coverage
