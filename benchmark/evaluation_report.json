@@ -1,0 +1,2784 @@
+{
+  "generated_at_epoch": 1790680812.6837645,
+  "objective": "scientific_generalization_evaluation",
+  "uses_document_id_12": false,
+  "external_provider_calls": false,
+  "datasets": [
+    {
+      "name": "small",
+      "chunk_count": 8,
+      "fact_chunk_indexes": {
+        "atlas_date": 0,
+        "zephyr_reference": 2,
+        "delta_percentage": 3,
+        "boreal_duration": 4,
+        "ocr_noise": 5,
+        "cygnus_amount": 6,
+        "fenix_obligation": 7
+      },
+      "question_count": 10
+    },
+    {
+      "name": "medium",
+      "chunk_count": 50,
+      "fact_chunk_indexes": {
+        "atlas_date": 0,
+        "zephyr_reference": 2,
+        "delta_percentage": 16,
+        "boreal_duration": 25,
+        "ocr_noise": 26,
+        "cygnus_amount": 48,
+        "fenix_obligation": 49
+      },
+      "question_count": 10
+    },
+    {
+      "name": "large",
+      "chunk_count": 180,
+      "fact_chunk_indexes": {
+        "atlas_date": 0,
+        "zephyr_reference": 2,
+        "delta_percentage": 60,
+        "boreal_duration": 90,
+        "ocr_noise": 91,
+        "cygnus_amount": 178,
+        "fenix_obligation": 179
+      },
+      "question_count": 10
+    }
+  ],
+  "approaches": {
+    "rag": {
+      "datasets": [
+        {
+          "dataset": "small",
+          "metrics": {
+            "case_count": 10,
+            "success_count": 8,
+            "failure_count": 2,
+            "avg_recall@1": 0.7037,
+            "avg_recall@3": 0.9074,
+            "avg_recall@5": 0.9074,
+            "avg_recall@k": null,
+            "avg_mrr": 0.8889
+          },
+          "questions": [
+            {
+              "dataset": "small",
+              "question_id": "small_date",
+              "question_type": "date",
+              "question": "Quelle est la date de reunion du Programme Atlas ?",
+              "expected_location": "beginning",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  0
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  0
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_duration",
+              "question_type": "duration",
+              "question": "Quelle est la duree de validite du Cycle Boreal ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  4
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  4
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_amount",
+              "question_type": "amount",
+              "question": "Quel est le montant reserve du Budget Cygnus ?",
+              "expected_location": "end",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  6
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  6
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_percentage",
+              "question_type": "percentage",
+              "question": "Quel est le pourcentage de la Retenue Delta ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  3
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  3
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_reference",
+              "question_type": "reference",
+              "question": "Quelle est la reference documentaire Zephyr ?",
+              "expected_location": "beginning",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  2
+                ],
+                "vector_candidate_rank": 2,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  2
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_comparison",
+              "question_type": "comparison",
+              "question": "Compare le montant du Budget Cygnus et le pourcentage de la Retenue Delta.",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@1": 0.0,
+                "recall@3": 0.5,
+                "recall@5": 0.5,
+                "mrr": 0.5,
+                "expected_chunk_indexes": [
+                  6,
+                  3
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 2,
+                "context_included_chunk_indexes": [
+                  3
+                ],
+                "context_inclusion_success": false,
+                "subquery_coverage": {
+                  "subquery_1": true,
+                  "subquery_2": true
+                }
+              },
+              "success": false
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_multi",
+              "question_type": "multi_part",
+              "question": "Quelle est la date du Programme Atlas, quelle est la duree du Cycle Boreal et quelle est la reference Zephyr ?",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@1": 0.3333,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  0,
+                  4,
+                  2
+                ],
+                "vector_candidate_rank": 2,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": 2,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  0,
+                  2,
+                  4
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": {
+                  "subquery_1": true,
+                  "subquery_2": true,
+                  "subquery_3": true
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_synthesis",
+              "question_type": "global_synthesis",
+              "question": "Resume les obligations et informations chiffrees principales.",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@1": 0.0,
+                "recall@3": 0.6667,
+                "recall@5": 0.6667,
+                "mrr": 0.5,
+                "expected_chunk_indexes": [
+                  7,
+                  6,
+                  3
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 2,
+                "final_rank": 2,
+                "context_included_chunk_indexes": [
+                  3,
+                  6
+                ],
+                "context_inclusion_success": false,
+                "subquery_coverage": null
+              },
+              "success": false
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_absent",
+              "question_type": "absent_information",
+              "question": "Quel est le nom du directeur Nova absent ?",
+              "expected_location": "absent",
+              "retrieval_metrics": {
+                "recall@1": null,
+                "recall@3": null,
+                "recall@5": null,
+                "mrr": null,
+                "expected_chunk_indexes": [],
+                "vector_candidate_rank": null,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": null,
+                "after_reranking_rank": null,
+                "final_rank": null,
+                "context_included_chunk_indexes": [],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_ocr",
+              "question_type": "ocr_normalization",
+              "question": "Quelle est la date de la Mission Ivoire malgre le bruit OCR ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  5
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  5
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            }
+          ]
+        },
+        {
+          "dataset": "medium",
+          "metrics": {
+            "case_count": 10,
+            "success_count": 8,
+            "failure_count": 2,
+            "avg_recall@1": 0.7037,
+            "avg_recall@3": 0.8704,
+            "avg_recall@5": 0.8704,
+            "avg_recall@k": null,
+            "avg_mrr": 0.8704
+          },
+          "questions": [
+            {
+              "dataset": "medium",
+              "question_id": "medium_date",
+              "question_type": "date",
+              "question": "Quelle est la date de reunion du Programme Atlas ?",
+              "expected_location": "beginning",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  0
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  0
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_duration",
+              "question_type": "duration",
+              "question": "Quelle est la duree de validite du Cycle Boreal ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  25
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  25
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_amount",
+              "question_type": "amount",
+              "question": "Quel est le montant reserve du Budget Cygnus ?",
+              "expected_location": "end",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  48
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  48
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_percentage",
+              "question_type": "percentage",
+              "question": "Quel est le pourcentage de la Retenue Delta ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  16
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  16
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_reference",
+              "question_type": "reference",
+              "question": "Quelle est la reference documentaire Zephyr ?",
+              "expected_location": "beginning",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  2
+                ],
+                "vector_candidate_rank": 2,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  2
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_comparison",
+              "question_type": "comparison",
+              "question": "Compare le montant du Budget Cygnus et le pourcentage de la Retenue Delta.",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@1": 0.0,
+                "recall@3": 0.5,
+                "recall@5": 0.5,
+                "mrr": 0.3333,
+                "expected_chunk_indexes": [
+                  48,
+                  16
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 3,
+                "context_included_chunk_indexes": [
+                  48
+                ],
+                "context_inclusion_success": false,
+                "subquery_coverage": {
+                  "subquery_1": true,
+                  "subquery_2": true
+                }
+              },
+              "success": false
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_multi",
+              "question_type": "multi_part",
+              "question": "Quelle est la date du Programme Atlas, quelle est la duree du Cycle Boreal et quelle est la reference Zephyr ?",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@1": 0.3333,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  0,
+                  25,
+                  2
+                ],
+                "vector_candidate_rank": 4,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": 4,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  0,
+                  2,
+                  25
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": {
+                  "subquery_1": true,
+                  "subquery_2": true,
+                  "subquery_3": true
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_synthesis",
+              "question_type": "global_synthesis",
+              "question": "Resume les obligations et informations chiffrees principales.",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@1": 0.0,
+                "recall@3": 0.3333,
+                "recall@5": 0.3333,
+                "mrr": 0.5,
+                "expected_chunk_indexes": [
+                  49,
+                  48,
+                  16
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 2,
+                "final_rank": 2,
+                "context_included_chunk_indexes": [
+                  16
+                ],
+                "context_inclusion_success": false,
+                "subquery_coverage": null
+              },
+              "success": false
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_absent",
+              "question_type": "absent_information",
+              "question": "Quel est le nom du directeur Nova absent ?",
+              "expected_location": "absent",
+              "retrieval_metrics": {
+                "recall@1": null,
+                "recall@3": null,
+                "recall@5": null,
+                "mrr": null,
+                "expected_chunk_indexes": [],
+                "vector_candidate_rank": null,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": null,
+                "after_reranking_rank": null,
+                "final_rank": null,
+                "context_included_chunk_indexes": [],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_ocr",
+              "question_type": "ocr_normalization",
+              "question": "Quelle est la date de la Mission Ivoire malgre le bruit OCR ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  26
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  26
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            }
+          ]
+        },
+        {
+          "dataset": "large",
+          "metrics": {
+            "case_count": 10,
+            "success_count": 8,
+            "failure_count": 2,
+            "avg_recall@1": 0.7037,
+            "avg_recall@3": 0.7778,
+            "avg_recall@5": 0.7778,
+            "avg_recall@k": null,
+            "avg_mrr": 0.7778
+          },
+          "questions": [
+            {
+              "dataset": "large",
+              "question_id": "large_date",
+              "question_type": "date",
+              "question": "Quelle est la date de reunion du Programme Atlas ?",
+              "expected_location": "beginning",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  0
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  0
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_duration",
+              "question_type": "duration",
+              "question": "Quelle est la duree de validite du Cycle Boreal ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  90
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  90
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_amount",
+              "question_type": "amount",
+              "question": "Quel est le montant reserve du Budget Cygnus ?",
+              "expected_location": "end",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  178
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  178
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_percentage",
+              "question_type": "percentage",
+              "question": "Quel est le pourcentage de la Retenue Delta ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  60
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  60
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_reference",
+              "question_type": "reference",
+              "question": "Quelle est la reference documentaire Zephyr ?",
+              "expected_location": "beginning",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  2
+                ],
+                "vector_candidate_rank": 2,
+                "lexical_candidate_rank": 1,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  2
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_comparison",
+              "question_type": "comparison",
+              "question": "Compare le montant du Budget Cygnus et le pourcentage de la Retenue Delta.",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@1": 0.0,
+                "recall@3": 0.0,
+                "recall@5": 0.0,
+                "mrr": 0.0,
+                "expected_chunk_indexes": [
+                  178,
+                  60
+                ],
+                "vector_candidate_rank": 3,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": 3,
+                "after_reranking_rank": 1,
+                "final_rank": null,
+                "context_included_chunk_indexes": [],
+                "context_inclusion_success": false,
+                "subquery_coverage": {
+                  "subquery_1": true,
+                  "subquery_2": true
+                }
+              },
+              "success": false
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_multi",
+              "question_type": "multi_part",
+              "question": "Quelle est la date du Programme Atlas, quelle est la duree du Cycle Boreal et quelle est la reference Zephyr ?",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@1": 0.3333,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  0,
+                  90,
+                  2
+                ],
+                "vector_candidate_rank": 14,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": 14,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  0,
+                  2,
+                  90
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": {
+                  "subquery_1": true,
+                  "subquery_2": true,
+                  "subquery_3": true
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_synthesis",
+              "question_type": "global_synthesis",
+              "question": "Resume les obligations et informations chiffrees principales.",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@1": 0.0,
+                "recall@3": 0.0,
+                "recall@5": 0.0,
+                "mrr": 0.0,
+                "expected_chunk_indexes": [
+                  179,
+                  178,
+                  60
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 20,
+                "final_rank": null,
+                "context_included_chunk_indexes": [],
+                "context_inclusion_success": false,
+                "subquery_coverage": null
+              },
+              "success": false
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_absent",
+              "question_type": "absent_information",
+              "question": "Quel est le nom du directeur Nova absent ?",
+              "expected_location": "absent",
+              "retrieval_metrics": {
+                "recall@1": null,
+                "recall@3": null,
+                "recall@5": null,
+                "mrr": null,
+                "expected_chunk_indexes": [],
+                "vector_candidate_rank": null,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": null,
+                "after_reranking_rank": null,
+                "final_rank": null,
+                "context_included_chunk_indexes": [],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_ocr",
+              "question_type": "ocr_normalization",
+              "question": "Quelle est la date de la Mission Ivoire malgre le bruit OCR ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "recall@5": 1.0,
+                "mrr": 1.0,
+                "expected_chunk_indexes": [
+                  91
+                ],
+                "vector_candidate_rank": 1,
+                "lexical_candidate_rank": null,
+                "after_rrf_rank": 1,
+                "after_reranking_rank": 1,
+                "final_rank": 1,
+                "context_included_chunk_indexes": [
+                  91
+                ],
+                "context_inclusion_success": true,
+                "subquery_coverage": null
+              },
+              "success": true
+            }
+          ]
+        }
+      ],
+      "metrics": {
+        "case_count": 30,
+        "success_count": 24,
+        "failure_count": 6,
+        "avg_recall@1": 0.7037,
+        "avg_recall@3": 0.8519,
+        "avg_recall@5": 0.8519,
+        "avg_recall@k": null,
+        "avg_mrr": 0.8457
+      }
+    },
+    "raptor": {
+      "datasets": [
+        {
+          "dataset": "small",
+          "metrics": {
+            "case_count": 10,
+            "success_count": 9,
+            "failure_count": 1,
+            "avg_recall@1": null,
+            "avg_recall@3": null,
+            "avg_recall@5": null,
+            "avg_recall@k": 0.9259,
+            "avg_mrr": 0.9444
+          },
+          "questions": [
+            {
+              "dataset": "small",
+              "question_id": "small_date",
+              "question_type": "date",
+              "question": "Quelle est la date de reunion du Programme Atlas ?",
+              "expected_location": "beginning",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  0
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  0
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 2,
+                  "1": 1,
+                  "2": 1,
+                  "3": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_duration",
+              "question_type": "duration",
+              "question": "Quelle est la duree de validite du Cycle Boreal ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  4
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  4
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 2,
+                  "1": 1,
+                  "2": 1,
+                  "3": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_amount",
+              "question_type": "amount",
+              "question": "Quel est le montant reserve du Budget Cygnus ?",
+              "expected_location": "end",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  6
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  6
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 3,
+                  "1": 1,
+                  "2": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_percentage",
+              "question_type": "percentage",
+              "question": "Quel est le pourcentage de la Retenue Delta ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  3
+                ],
+                "selected_levels": [
+                  0,
+                  1
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  3
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 4,
+                  "1": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_reference",
+              "question_type": "reference",
+              "question": "Quelle est la reference documentaire Zephyr ?",
+              "expected_location": "beginning",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 0.5,
+                "expected_leaf_chunk_indexes": [
+                  2
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  2
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 2,
+                  "1": 1,
+                  "2": 1,
+                  "3": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_comparison",
+              "question_type": "comparison",
+              "question": "Compare le montant du Budget Cygnus et le pourcentage de la Retenue Delta.",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  6,
+                  3
+                ],
+                "selected_levels": [
+                  0,
+                  2,
+                  3
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  3,
+                  6
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 2,
+                  "3": 1,
+                  "2": 2
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_multi",
+              "question_type": "multi_part",
+              "question": "Quelle est la date du Programme Atlas, quelle est la duree du Cycle Boreal et quelle est la reference Zephyr ?",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  0,
+                  4,
+                  2
+                ],
+                "selected_levels": [
+                  0,
+                  1
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  0,
+                  2,
+                  4
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true,
+                  "subintent_2": true,
+                  "subintent_3": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 4,
+                  "1": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_synthesis",
+              "question_type": "global_synthesis",
+              "question": "Resume les obligations et informations chiffrees principales.",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@k": 0.3333,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  7,
+                  6,
+                  3
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "leaf_coverage": 0.3333,
+                "context_included_chunk_indexes": [
+                  7
+                ],
+                "context_inclusion_success": false,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 1,
+                  "1": 1,
+                  "2": 2,
+                  "3": 1
+                }
+              },
+              "success": false
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_absent",
+              "question_type": "absent_information",
+              "question": "Quel est le nom du directeur Nova absent ?",
+              "expected_location": "absent",
+              "retrieval_metrics": {
+                "recall@k": null,
+                "mrr": null,
+                "expected_leaf_chunk_indexes": [],
+                "selected_levels": [
+                  0,
+                  2,
+                  3
+                ],
+                "leaf_coverage": null,
+                "context_included_chunk_indexes": [],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "3": 1,
+                  "2": 1,
+                  "0": 3
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "small",
+              "question_id": "small_ocr",
+              "question_type": "ocr_normalization",
+              "question": "Quelle est la date de la Mission Ivoire malgre le bruit OCR ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  5
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  5
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 2,
+                  "1": 1,
+                  "2": 1,
+                  "3": 1
+                }
+              },
+              "success": true
+            }
+          ],
+          "summary_fidelity": {
+            "checks": [
+              {
+                "dataset": "small",
+                "summary_node_id": 1075,
+                "level": 1,
+                "fact_id": "zephyr_reference",
+                "fact_type": "reference",
+                "expected_value": "REF-ZEPHYR-904",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1076,
+                "level": 1,
+                "fact_id": "cygnus_amount",
+                "fact_type": "amount",
+                "expected_value": "12 400 MAD",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1076,
+                "level": 1,
+                "fact_id": "fenix_obligation",
+                "fact_type": "obligation",
+                "expected_value": "rapport hebdomadaire",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1077,
+                "level": 1,
+                "fact_id": "atlas_date",
+                "fact_type": "date",
+                "expected_value": "17 mars 2029",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1078,
+                "level": 1,
+                "fact_id": "boreal_duration",
+                "fact_type": "duration",
+                "expected_value": "45 jours",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1078,
+                "level": 1,
+                "fact_id": "delta_percentage",
+                "fact_type": "percentage",
+                "expected_value": "7,5 %",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1078,
+                "level": 1,
+                "fact_id": "ocr_noise",
+                "fact_type": "date",
+                "expected_value": "15 aout 2031",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1079,
+                "level": 2,
+                "fact_id": "cygnus_amount",
+                "fact_type": "amount",
+                "expected_value": "12 400 MAD",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1079,
+                "level": 2,
+                "fact_id": "fenix_obligation",
+                "fact_type": "obligation",
+                "expected_value": "rapport hebdomadaire",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1080,
+                "level": 2,
+                "fact_id": "atlas_date",
+                "fact_type": "date",
+                "expected_value": "17 mars 2029",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1080,
+                "level": 2,
+                "fact_id": "boreal_duration",
+                "fact_type": "duration",
+                "expected_value": "45 jours",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1080,
+                "level": 2,
+                "fact_id": "delta_percentage",
+                "fact_type": "percentage",
+                "expected_value": "7,5 %",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1080,
+                "level": 2,
+                "fact_id": "zephyr_reference",
+                "fact_type": "reference",
+                "expected_value": "REF-ZEPHYR-904",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1080,
+                "level": 2,
+                "fact_id": "ocr_noise",
+                "fact_type": "date",
+                "expected_value": "15 aout 2031",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1081,
+                "level": 3,
+                "fact_id": "atlas_date",
+                "fact_type": "date",
+                "expected_value": "17 mars 2029",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1081,
+                "level": 3,
+                "fact_id": "boreal_duration",
+                "fact_type": "duration",
+                "expected_value": "45 jours",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1081,
+                "level": 3,
+                "fact_id": "cygnus_amount",
+                "fact_type": "amount",
+                "expected_value": "12 400 MAD",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1081,
+                "level": 3,
+                "fact_id": "delta_percentage",
+                "fact_type": "percentage",
+                "expected_value": "7,5 %",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1081,
+                "level": 3,
+                "fact_id": "zephyr_reference",
+                "fact_type": "reference",
+                "expected_value": "REF-ZEPHYR-904",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1081,
+                "level": 3,
+                "fact_id": "fenix_obligation",
+                "fact_type": "obligation",
+                "expected_value": "rapport hebdomadaire",
+                "preserved": true
+              },
+              {
+                "dataset": "small",
+                "summary_node_id": 1081,
+                "level": 3,
+                "fact_id": "ocr_noise",
+                "fact_type": "date",
+                "expected_value": "15 aout 2031",
+                "preserved": true
+              }
+            ],
+            "summary_fidelity": 1.0,
+            "preserved": 21,
+            "total": 21
+          }
+        },
+        {
+          "dataset": "medium",
+          "metrics": {
+            "case_count": 10,
+            "success_count": 9,
+            "failure_count": 1,
+            "avg_recall@1": null,
+            "avg_recall@3": null,
+            "avg_recall@5": null,
+            "avg_recall@k": 0.9259,
+            "avg_mrr": 0.9444
+          },
+          "questions": [
+            {
+              "dataset": "medium",
+              "question_id": "medium_date",
+              "question_type": "date",
+              "question": "Quelle est la date de reunion du Programme Atlas ?",
+              "expected_location": "beginning",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  0
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  0
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 3,
+                  "1": 1,
+                  "2": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_duration",
+              "question_type": "duration",
+              "question": "Quelle est la duree de validite du Cycle Boreal ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  25
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  25
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 2,
+                  "1": 1,
+                  "2": 1,
+                  "3": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_amount",
+              "question_type": "amount",
+              "question": "Quel est le montant reserve du Budget Cygnus ?",
+              "expected_location": "end",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  48
+                ],
+                "selected_levels": [
+                  0,
+                  1
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  48
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 4,
+                  "1": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_percentage",
+              "question_type": "percentage",
+              "question": "Quel est le pourcentage de la Retenue Delta ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  16
+                ],
+                "selected_levels": [
+                  0
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  16
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 5
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_reference",
+              "question_type": "reference",
+              "question": "Quelle est la reference documentaire Zephyr ?",
+              "expected_location": "beginning",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 0.5,
+                "expected_leaf_chunk_indexes": [
+                  2
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  2
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 3,
+                  "1": 1,
+                  "2": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_comparison",
+              "question_type": "comparison",
+              "question": "Compare le montant du Budget Cygnus et le pourcentage de la Retenue Delta.",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  48,
+                  16
+                ],
+                "selected_levels": [
+                  0
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  16,
+                  48
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 5
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_multi",
+              "question_type": "multi_part",
+              "question": "Quelle est la date du Programme Atlas, quelle est la duree du Cycle Boreal et quelle est la reference Zephyr ?",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  0,
+                  25,
+                  2
+                ],
+                "selected_levels": [
+                  0
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  0,
+                  2,
+                  25
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true,
+                  "subintent_2": true,
+                  "subintent_3": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 5
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_synthesis",
+              "question_type": "global_synthesis",
+              "question": "Resume les obligations et informations chiffrees principales.",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@k": 0.3333,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  49,
+                  48,
+                  16
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "leaf_coverage": 0.3333,
+                "context_included_chunk_indexes": [
+                  49
+                ],
+                "context_inclusion_success": false,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 1,
+                  "1": 2,
+                  "2": 1,
+                  "3": 1
+                }
+              },
+              "success": false
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_absent",
+              "question_type": "absent_information",
+              "question": "Quel est le nom du directeur Nova absent ?",
+              "expected_location": "absent",
+              "retrieval_metrics": {
+                "recall@k": null,
+                "mrr": null,
+                "expected_leaf_chunk_indexes": [],
+                "selected_levels": [
+                  1
+                ],
+                "leaf_coverage": null,
+                "context_included_chunk_indexes": [],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "1": 5
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "medium",
+              "question_id": "medium_ocr",
+              "question_type": "ocr_normalization",
+              "question": "Quelle est la date de la Mission Ivoire malgre le bruit OCR ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  26
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  26
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 3,
+                  "1": 1,
+                  "2": 1
+                }
+              },
+              "success": true
+            }
+          ],
+          "summary_fidelity": {
+            "checks": [
+              {
+                "dataset": "medium",
+                "summary_node_id": 1134,
+                "level": 1,
+                "fact_id": "zephyr_reference",
+                "fact_type": "reference",
+                "expected_value": "REF-ZEPHYR-904",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1138,
+                "level": 1,
+                "fact_id": "atlas_date",
+                "fact_type": "date",
+                "expected_value": "17 mars 2029",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1138,
+                "level": 1,
+                "fact_id": "boreal_duration",
+                "fact_type": "duration",
+                "expected_value": "45 jours",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1138,
+                "level": 1,
+                "fact_id": "delta_percentage",
+                "fact_type": "percentage",
+                "expected_value": "7,5 %",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1138,
+                "level": 1,
+                "fact_id": "ocr_noise",
+                "fact_type": "date",
+                "expected_value": "15 aout 2031",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1145,
+                "level": 1,
+                "fact_id": "cygnus_amount",
+                "fact_type": "amount",
+                "expected_value": "12 400 MAD",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1145,
+                "level": 1,
+                "fact_id": "fenix_obligation",
+                "fact_type": "obligation",
+                "expected_value": "rapport hebdomadaire",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1150,
+                "level": 2,
+                "fact_id": "cygnus_amount",
+                "fact_type": "amount",
+                "expected_value": "12 400 MAD",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1150,
+                "level": 2,
+                "fact_id": "fenix_obligation",
+                "fact_type": "obligation",
+                "expected_value": "rapport hebdomadaire",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1153,
+                "level": 2,
+                "fact_id": "atlas_date",
+                "fact_type": "date",
+                "expected_value": "17 mars 2029",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1153,
+                "level": 2,
+                "fact_id": "boreal_duration",
+                "fact_type": "duration",
+                "expected_value": "45 jours",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1153,
+                "level": 2,
+                "fact_id": "delta_percentage",
+                "fact_type": "percentage",
+                "expected_value": "7,5 %",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1153,
+                "level": 2,
+                "fact_id": "ocr_noise",
+                "fact_type": "date",
+                "expected_value": "15 aout 2031",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1155,
+                "level": 2,
+                "fact_id": "zephyr_reference",
+                "fact_type": "reference",
+                "expected_value": "REF-ZEPHYR-904",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1156,
+                "level": 3,
+                "fact_id": "cygnus_amount",
+                "fact_type": "amount",
+                "expected_value": "12 400 MAD",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1156,
+                "level": 3,
+                "fact_id": "fenix_obligation",
+                "fact_type": "obligation",
+                "expected_value": "rapport hebdomadaire",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1158,
+                "level": 3,
+                "fact_id": "zephyr_reference",
+                "fact_type": "reference",
+                "expected_value": "REF-ZEPHYR-904",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1159,
+                "level": 3,
+                "fact_id": "atlas_date",
+                "fact_type": "date",
+                "expected_value": "17 mars 2029",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1159,
+                "level": 3,
+                "fact_id": "boreal_duration",
+                "fact_type": "duration",
+                "expected_value": "45 jours",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1159,
+                "level": 3,
+                "fact_id": "delta_percentage",
+                "fact_type": "percentage",
+                "expected_value": "7,5 %",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 1159,
+                "level": 3,
+                "fact_id": "ocr_noise",
+                "fact_type": "date",
+                "expected_value": "15 aout 2031",
+                "preserved": true
+              }
+            ],
+            "summary_fidelity": 1.0,
+            "preserved": 21,
+            "total": 21
+          }
+        },
+        {
+          "dataset": "large",
+          "metrics": {
+            "case_count": 10,
+            "success_count": 9,
+            "failure_count": 1,
+            "avg_recall@1": null,
+            "avg_recall@3": null,
+            "avg_recall@5": null,
+            "avg_recall@k": 0.9259,
+            "avg_mrr": 0.9444
+          },
+          "questions": [
+            {
+              "dataset": "large",
+              "question_id": "large_date",
+              "question_type": "date",
+              "question": "Quelle est la date de reunion du Programme Atlas ?",
+              "expected_location": "beginning",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  0
+                ],
+                "selected_levels": [
+                  0,
+                  1
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  0
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 4,
+                  "1": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_duration",
+              "question_type": "duration",
+              "question": "Quelle est la duree de validite du Cycle Boreal ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  90
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  90
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 3,
+                  "1": 1,
+                  "2": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_amount",
+              "question_type": "amount",
+              "question": "Quel est le montant reserve du Budget Cygnus ?",
+              "expected_location": "end",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  178
+                ],
+                "selected_levels": [
+                  0
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  178
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 5
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_percentage",
+              "question_type": "percentage",
+              "question": "Quel est le pourcentage de la Retenue Delta ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  60
+                ],
+                "selected_levels": [
+                  0
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  60
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 5
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_reference",
+              "question_type": "reference",
+              "question": "Quelle est la reference documentaire Zephyr ?",
+              "expected_location": "beginning",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 0.5,
+                "expected_leaf_chunk_indexes": [
+                  2
+                ],
+                "selected_levels": [
+                  0,
+                  1
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  2
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 4,
+                  "1": 1
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_comparison",
+              "question_type": "comparison",
+              "question": "Compare le montant du Budget Cygnus et le pourcentage de la Retenue Delta.",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  178,
+                  60
+                ],
+                "selected_levels": [
+                  0,
+                  2,
+                  3
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  60,
+                  178
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 2,
+                  "3": 1,
+                  "2": 2
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_multi",
+              "question_type": "multi_part",
+              "question": "Quelle est la date du Programme Atlas, quelle est la duree du Cycle Boreal et quelle est la reference Zephyr ?",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  0,
+                  90,
+                  2
+                ],
+                "selected_levels": [
+                  0
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  0,
+                  2,
+                  90
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true,
+                  "subintent_2": true,
+                  "subintent_3": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 5
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_synthesis",
+              "question_type": "global_synthesis",
+              "question": "Resume les obligations et informations chiffrees principales.",
+              "expected_location": "dispersed",
+              "retrieval_metrics": {
+                "recall@k": 0.3333,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  179,
+                  178,
+                  60
+                ],
+                "selected_levels": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "leaf_coverage": 0.3333,
+                "context_included_chunk_indexes": [
+                  179
+                ],
+                "context_inclusion_success": false,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 1,
+                  "1": 1,
+                  "2": 2,
+                  "3": 1
+                }
+              },
+              "success": false
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_absent",
+              "question_type": "absent_information",
+              "question": "Quel est le nom du directeur Nova absent ?",
+              "expected_location": "absent",
+              "retrieval_metrics": {
+                "recall@k": null,
+                "mrr": null,
+                "expected_leaf_chunk_indexes": [],
+                "selected_levels": [
+                  0,
+                  2,
+                  3
+                ],
+                "leaf_coverage": null,
+                "context_included_chunk_indexes": [],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "3": 1,
+                  "2": 1,
+                  "0": 3
+                }
+              },
+              "success": true
+            },
+            {
+              "dataset": "large",
+              "question_id": "large_ocr",
+              "question_type": "ocr_normalization",
+              "question": "Quelle est la date de la Mission Ivoire malgre le bruit OCR ?",
+              "expected_location": "middle",
+              "retrieval_metrics": {
+                "recall@k": 1.0,
+                "mrr": 1.0,
+                "expected_leaf_chunk_indexes": [
+                  91
+                ],
+                "selected_levels": [
+                  0,
+                  1
+                ],
+                "leaf_coverage": 1.0,
+                "context_included_chunk_indexes": [
+                  91
+                ],
+                "context_inclusion_success": true,
+                "subintent_coverage": {
+                  "subintent_1": true
+                },
+                "selected_nodes_per_level": {
+                  "0": 4,
+                  "1": 1
+                }
+              },
+              "success": true
+            }
+          ],
+          "summary_fidelity": {
+            "checks": [
+              {
+                "dataset": "large",
+                "summary_node_id": 1340,
+                "level": 1,
+                "fact_id": "atlas_date",
+                "fact_type": "date",
+                "expected_value": "17 mars 2029",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1340,
+                "level": 1,
+                "fact_id": "boreal_duration",
+                "fact_type": "duration",
+                "expected_value": "45 jours",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1340,
+                "level": 1,
+                "fact_id": "delta_percentage",
+                "fact_type": "percentage",
+                "expected_value": "7,5 %",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1341,
+                "level": 1,
+                "fact_id": "zephyr_reference",
+                "fact_type": "reference",
+                "expected_value": "REF-ZEPHYR-904",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1342,
+                "level": 1,
+                "fact_id": "cygnus_amount",
+                "fact_type": "amount",
+                "expected_value": "12 400 MAD",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1342,
+                "level": 1,
+                "fact_id": "fenix_obligation",
+                "fact_type": "obligation",
+                "expected_value": "rapport hebdomadaire",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1343,
+                "level": 1,
+                "fact_id": "ocr_noise",
+                "fact_type": "date",
+                "expected_value": "15 aout 2031",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1344,
+                "level": 2,
+                "fact_id": "cygnus_amount",
+                "fact_type": "amount",
+                "expected_value": "12 400 MAD",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1344,
+                "level": 2,
+                "fact_id": "zephyr_reference",
+                "fact_type": "reference",
+                "expected_value": "REF-ZEPHYR-904",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1344,
+                "level": 2,
+                "fact_id": "fenix_obligation",
+                "fact_type": "obligation",
+                "expected_value": "rapport hebdomadaire",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1345,
+                "level": 2,
+                "fact_id": "atlas_date",
+                "fact_type": "date",
+                "expected_value": "17 mars 2029",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1345,
+                "level": 2,
+                "fact_id": "boreal_duration",
+                "fact_type": "duration",
+                "expected_value": "45 jours",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1345,
+                "level": 2,
+                "fact_id": "delta_percentage",
+                "fact_type": "percentage",
+                "expected_value": "7,5 %",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1345,
+                "level": 2,
+                "fact_id": "ocr_noise",
+                "fact_type": "date",
+                "expected_value": "15 aout 2031",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1346,
+                "level": 3,
+                "fact_id": "atlas_date",
+                "fact_type": "date",
+                "expected_value": "17 mars 2029",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1346,
+                "level": 3,
+                "fact_id": "boreal_duration",
+                "fact_type": "duration",
+                "expected_value": "45 jours",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1346,
+                "level": 3,
+                "fact_id": "cygnus_amount",
+                "fact_type": "amount",
+                "expected_value": "12 400 MAD",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1346,
+                "level": 3,
+                "fact_id": "delta_percentage",
+                "fact_type": "percentage",
+                "expected_value": "7,5 %",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1346,
+                "level": 3,
+                "fact_id": "zephyr_reference",
+                "fact_type": "reference",
+                "expected_value": "REF-ZEPHYR-904",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1346,
+                "level": 3,
+                "fact_id": "fenix_obligation",
+                "fact_type": "obligation",
+                "expected_value": "rapport hebdomadaire",
+                "preserved": true
+              },
+              {
+                "dataset": "large",
+                "summary_node_id": 1346,
+                "level": 3,
+                "fact_id": "ocr_noise",
+                "fact_type": "date",
+                "expected_value": "15 aout 2031",
+                "preserved": true
+              }
+            ],
+            "summary_fidelity": 1.0,
+            "preserved": 21,
+            "total": 21
+          }
+        }
+      ],
+      "summary_fidelity": {
+        "overall_summary_fidelity": 1.0,
+        "dataset_count": 3
+      },
+      "metrics": {
+        "case_count": 30,
+        "success_count": 27,
+        "failure_count": 3,
+        "avg_recall@1": null,
+        "avg_recall@3": null,
+        "avg_recall@5": null,
+        "avg_recall@k": 0.9259,
+        "avg_mrr": 0.9444
+      }
+    },
+    "prompt_engineering": {
+      "cases": [
+        {
+          "dataset": "prompt_under_limit",
+          "question_type": "information_positions",
+          "expected_location": "beginning_middle_end",
+          "truncation_metadata": {
+            "strategy": "full_context_prompt_engineering",
+            "version": "prompt_engineering_v2",
+            "original_char_count": 673,
+            "max_context_chars": 0,
+            "context_char_count": 673,
+            "original_token_count": 673,
+            "context_token_count": 673,
+            "estimated_original_token_count": null,
+            "estimated_context_token_count": null,
+            "token_count_method": "provider_count_tokens",
+            "token_count_scope": "provider_input_prompt_plus_context",
+            "token_count_source": "provider",
+            "token_count_measured": true,
+            "safe_input_token_limit": 900000,
+            "model_input_token_limit": 1048576,
+            "max_input_tokens": 900000,
+            "token_safety_margin": 8192,
+            "reserved_output_tokens": 1024,
+            "truncated": false,
+            "full_document_used": true,
+            "truncation_strategy": null
+          },
+          "zone_conserved": {
+            "atlas_date": true,
+            "zephyr_reference": true,
+            "delta_percentage": true,
+            "boreal_duration": true,
+            "ocr_noise": true,
+            "cygnus_amount": true,
+            "fenix_obligation": true
+          },
+          "success": true
+        },
+        {
+          "dataset": "prompt_near_limit",
+          "question_type": "near_limit",
+          "expected_location": "full_document",
+          "truncation_metadata": {
+            "strategy": "full_context_prompt_engineering",
+            "version": "prompt_engineering_v2",
+            "original_char_count": 1027,
+            "max_context_chars": 0,
+            "context_char_count": 1027,
+            "original_token_count": 1027,
+            "context_token_count": 1027,
+            "estimated_original_token_count": null,
+            "estimated_context_token_count": null,
+            "token_count_method": "provider_count_tokens",
+            "token_count_scope": "provider_input_prompt_plus_context",
+            "token_count_source": "provider",
+            "token_count_measured": true,
+            "safe_input_token_limit": 1127,
+            "model_input_token_limit": 1227,
+            "max_input_tokens": 1127,
+            "token_safety_margin": 20,
+            "reserved_output_tokens": 30,
+            "truncated": false,
+            "full_document_used": true,
+            "truncation_strategy": null
+          },
+          "zone_conserved": {
+            "atlas_date": true,
+            "zephyr_reference": true,
+            "delta_percentage": true,
+            "boreal_duration": true,
+            "ocr_noise": true,
+            "cygnus_amount": true,
+            "fenix_obligation": true
+          },
+          "success": true
+        },
+        {
+          "dataset": "prompt_over_limit",
+          "question_type": "above_limit",
+          "expected_location": "after_truncation",
+          "truncation_metadata": {
+            "strategy": "full_context_prompt_engineering",
+            "version": "prompt_engineering_v2",
+            "original_char_count": 1383,
+            "max_context_chars": 0,
+            "context_char_count": 280,
+            "original_token_count": 1383,
+            "context_token_count": 280,
+            "estimated_original_token_count": null,
+            "estimated_context_token_count": null,
+            "token_count_method": "provider_count_tokens",
+            "token_count_scope": "provider_input_prompt_plus_context",
+            "token_count_source": "provider",
+            "token_count_measured": true,
+            "safe_input_token_limit": 280,
+            "model_input_token_limit": 360,
+            "max_input_tokens": 360,
+            "token_safety_margin": 40,
+            "reserved_output_tokens": 40,
+            "truncated": true,
+            "full_document_used": false,
+            "truncation_strategy": "token_aware_document_start_truncation"
+          },
+          "zone_conserved": {
+            "atlas_date": true,
+            "zephyr_reference": false,
+            "delta_percentage": false,
+            "boreal_duration": false,
+            "ocr_noise": false,
+            "cygnus_amount": false,
+            "fenix_obligation": false
+          },
+          "structural_limit": true,
+          "success": true
+        },
+        {
+          "dataset": "prompt_injection",
+          "question_type": "prompt_injection",
+          "expected_location": "document_content",
+          "truncation_metadata": {
+            "strategy": "full_context_prompt_engineering",
+            "version": "prompt_engineering_v2",
+            "original_char_count": 148,
+            "max_context_chars": 0,
+            "context_char_count": 148,
+            "original_token_count": 148,
+            "context_token_count": 148,
+            "estimated_original_token_count": null,
+            "estimated_context_token_count": null,
+            "token_count_method": "provider_count_tokens",
+            "token_count_scope": "provider_input_prompt_plus_context",
+            "token_count_source": "provider",
+            "token_count_measured": true,
+            "safe_input_token_limit": 900000,
+            "model_input_token_limit": 1048576,
+            "max_input_tokens": 900000,
+            "token_safety_margin": 8192,
+            "reserved_output_tokens": 1024,
+            "truncated": false,
+            "full_document_used": true,
+            "truncation_strategy": null,
+            "question_length": 35,
+            "provider": "gemini",
+            "model": "models/gemini-3.1-flash-lite",
+            "llm": {
+              "provider": "gemini",
+              "model": "models/gemini-3.1-flash-lite",
+              "called": true,
+              "temperature": 0.2,
+              "max_output_tokens": 1024
+            },
+            "grounding": "answer_only_from_full_or_bounded_document_context",
+            "fallback_answer": "Information not found in the provided document.",
+            "response_time_ms": 1.35,
+            "limits": {
+              "max_question_chars": 1000,
+              "max_context_chars": 0,
+              "model_input_token_limit": 1048576,
+              "max_input_tokens": 900000,
+              "safe_input_token_limit": 900000,
+              "token_safety_margin": 8192,
+              "estimated_chars_per_token": 3.0,
+              "llm_max_output_tokens": 1024,
+              "llm_temperature": 0.2,
+              "llm_retry_count": 1,
+              "llm_retry_backoff_seconds": 0.5,
+              "llm_request_timeout_seconds": 45
+            }
+          },
+          "malicious_text_in_context": true,
+          "anti_injection_instruction_present": true,
+          "external_actions": [],
+          "success": true
+        }
+      ],
+      "metrics": {
+        "case_count": 4,
+        "success_count": 4,
+        "truncated_count": 1,
+        "full_document_count": 3
+      }
+    }
+  },
+  "improvement_classification": {
+    "rag": {
+      "context_adaptive_budget": "JUSTIFIEE PAR LES TESTS",
+      "fuzzy_matching": "A INVESTIGUER"
+    },
+    "raptor": {
+      "top_down_traversal": "A INVESTIGUER",
+      "summary_fidelity_guard": "NON JUSTIFIEE",
+      "context_adaptive_budget": "JUSTIFIEE PAR LES TESTS"
+    },
+    "prompt_engineering": {
+      "retrieval_like_passage_selection": "RISQUE DE SUR-ADAPTATION",
+      "above_window_documents": "STRUCTURAL LIMIT",
+      "token_cost_monitoring": "JUSTIFIEE PAR LES TESTS"
+    }
+  },
+  "elapsed_ms": 28230.48
+}
