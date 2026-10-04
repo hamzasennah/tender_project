@@ -2,6 +2,7 @@ import logging
 import re
 import unicodedata
 from dataclasses import dataclass, replace
+from difflib import SequenceMatcher
 
 from django.conf import settings
 from django.db import DatabaseError, connection
@@ -37,9 +38,16 @@ DEFAULT_HYBRID_RERANK_PHRASE_WEIGHT = 0.012
 DEFAULT_HYBRID_RERANK_STRUCTURE_WEIGHT = 0.006
 DEFAULT_HYBRID_RERANK_CONCEPT_MATCH_WEIGHT = 0.024
 DEFAULT_HYBRID_RERANK_CONCEPT_MISMATCH_WEIGHT = 0.014
+DEFAULT_HYBRID_FUZZY_ENABLED = True
+DEFAULT_HYBRID_FUZZY_CANDIDATES = 8
+DEFAULT_HYBRID_FUZZY_SCAN_LIMIT = 200
+DEFAULT_HYBRID_FUZZY_MIN_TERM_LENGTH = 5
+DEFAULT_HYBRID_FUZZY_TERM_LIMIT = 8
+DEFAULT_HYBRID_FUZZY_SCORE_THRESHOLD = 0.86
 BASE_LEXICAL_QUERY_TERM_LIMIT = 16
 EXPANDED_LEXICAL_QUERY_TERM_LIMIT = 24
 LEXICAL_SEARCH_TERM_LIMIT = 32
+FUZZY_CHUNK_TOKEN_LIMIT = 160
 FALLBACK_LEXICAL_CONFIG = "simple"
 LEXICAL_QUERY_STOP_WORDS = {
     "a",
@@ -373,6 +381,46 @@ def get_hybrid_rerank_concept_mismatch_weight():
     )
 
 
+def get_hybrid_fuzzy_enabled():
+    return _get_bool_setting("HYBRID_FUZZY_ENABLED", DEFAULT_HYBRID_FUZZY_ENABLED)
+
+
+def get_hybrid_fuzzy_candidates():
+    return _get_positive_int_setting(
+        "HYBRID_FUZZY_CANDIDATES",
+        DEFAULT_HYBRID_FUZZY_CANDIDATES,
+    )
+
+
+def get_hybrid_fuzzy_scan_limit():
+    return _get_positive_int_setting(
+        "HYBRID_FUZZY_SCAN_LIMIT",
+        DEFAULT_HYBRID_FUZZY_SCAN_LIMIT,
+    )
+
+
+def get_hybrid_fuzzy_min_term_length():
+    return _get_positive_int_setting(
+        "HYBRID_FUZZY_MIN_TERM_LENGTH",
+        DEFAULT_HYBRID_FUZZY_MIN_TERM_LENGTH,
+    )
+
+
+def get_hybrid_fuzzy_term_limit():
+    return _get_positive_int_setting(
+        "HYBRID_FUZZY_TERM_LIMIT",
+        DEFAULT_HYBRID_FUZZY_TERM_LIMIT,
+    )
+
+
+def get_hybrid_fuzzy_score_threshold():
+    value = _get_nonnegative_float_setting(
+        "HYBRID_FUZZY_SCORE_THRESHOLD",
+        DEFAULT_HYBRID_FUZZY_SCORE_THRESHOLD,
+    )
+    return min(value, 1.0)
+
+
 def clean_query_text(query):
     normalized = str(query or "").replace("\r\n", "\n").replace("\r", "\n")
     normalized = normalized.replace("\x00", "")
@@ -488,6 +536,12 @@ def _search_limits_metadata():
         "hybrid_rerank_structure_weight": get_hybrid_rerank_structure_weight(),
         "hybrid_rerank_concept_match_weight": get_hybrid_rerank_concept_match_weight(),
         "hybrid_rerank_concept_mismatch_weight": get_hybrid_rerank_concept_mismatch_weight(),
+        "hybrid_fuzzy_enabled": get_hybrid_fuzzy_enabled(),
+        "hybrid_fuzzy_candidates": get_hybrid_fuzzy_candidates(),
+        "hybrid_fuzzy_scan_limit": get_hybrid_fuzzy_scan_limit(),
+        "hybrid_fuzzy_min_term_length": get_hybrid_fuzzy_min_term_length(),
+        "hybrid_fuzzy_term_limit": get_hybrid_fuzzy_term_limit(),
+        "hybrid_fuzzy_score_threshold": get_hybrid_fuzzy_score_threshold(),
     }
 
 
@@ -605,6 +659,30 @@ def _fold_text(value):
 
 def _tokenize_folded(value):
     return re.findall(r"[0-9a-z]+", _fold_text(value))
+
+
+def _fuzzy_query_terms(query_plan):
+    terms = []
+    seen = set()
+    min_length = get_hybrid_fuzzy_min_term_length()
+    for term in query_plan.base_terms:
+        if len(term) < min_length or term in seen:
+            continue
+        seen.add(term)
+        terms.append(term)
+        if len(terms) >= get_hybrid_fuzzy_term_limit():
+            break
+    return tuple(terms)
+
+
+def _fuzzy_term_similarity(query_term, candidate_term):
+    if query_term == candidate_term:
+        return 1.0
+    if not query_term or not candidate_term:
+        return 0.0
+    if abs(len(query_term) - len(candidate_term)) > max(2, len(query_term) // 3):
+        return 0.0
+    return SequenceMatcher(None, query_term, candidate_term).ratio()
 
 
 def _append_query_term(terms, seen, term):
@@ -980,6 +1058,103 @@ def _lexical_candidates(document, normalized_query, provider, limit):
     return chunks, config, query_plan
 
 
+def _best_fuzzy_chunk_score(query_terms, chunk_text):
+    chunk_terms = _tokenize_folded(chunk_text)[:FUZZY_CHUNK_TOKEN_LIMIT]
+    if not query_terms or not chunk_terms:
+        return 0.0, ()
+
+    matched_terms = []
+    scores = []
+    threshold = get_hybrid_fuzzy_score_threshold()
+    for query_term in query_terms:
+        best_score = max(
+            _fuzzy_term_similarity(query_term, chunk_term)
+            for chunk_term in chunk_terms
+        )
+        if best_score >= threshold:
+            matched_terms.append(query_term)
+            scores.append(best_score)
+
+    if not scores:
+        return 0.0, ()
+    return sum(scores) / len(query_terms), tuple(matched_terms)
+
+
+def _fuzzy_candidates(document, query_plan, provider, existing_chunk_ids):
+    metadata = {
+        "enabled": get_hybrid_fuzzy_enabled(),
+        "library": "python_stdlib_difflib",
+        "score_threshold": get_hybrid_fuzzy_score_threshold(),
+        "min_term_length": get_hybrid_fuzzy_min_term_length(),
+        "term_limit": get_hybrid_fuzzy_term_limit(),
+        "candidate_limit": get_hybrid_fuzzy_candidates(),
+        "scan_limit": get_hybrid_fuzzy_scan_limit(),
+        "chunk_token_limit": FUZZY_CHUNK_TOKEN_LIMIT,
+        "query_terms": [],
+        "scanned_chunk_count": 0,
+        "candidate_count": 0,
+    }
+    if not get_hybrid_fuzzy_enabled():
+        return [], {}, {}, metadata
+
+    query_terms = _fuzzy_query_terms(query_plan)
+    metadata["query_terms"] = list(query_terms)
+    if not query_terms:
+        return [], {}, {}, metadata
+
+    queryset = (
+        TextChunk.objects.filter(
+            document=document,
+            document__owner=document.owner,
+            embedding__status=ChunkEmbedding.Status.COMPLETED,
+            embedding__provider=provider.provider_name,
+            embedding__model=provider.model,
+            embedding__dimension=provider.dimension,
+            embedding__embedding_vector__isnull=False,
+        )
+        .exclude(id__in=existing_chunk_ids)
+        .order_by("chunk_index", "id")[: get_hybrid_fuzzy_scan_limit()]
+    )
+
+    try:
+        scanned_chunks = list(queryset)
+    except DatabaseError as exc:
+        logger.warning(
+            "Semantic fuzzy candidate scan failed",
+            extra={"document_id": document.id, "error_code": "semantic_search_failed"},
+        )
+        raise SemanticSearchError(
+            "semantic_search_failed",
+            "Semantic search could not be completed safely.",
+            exc.__class__.__name__,
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ) from exc
+
+    metadata["scanned_chunk_count"] = len(scanned_chunks)
+    scored_chunks = []
+    score_by_chunk_id = {}
+    signals_by_chunk_id = {}
+    for chunk in scanned_chunks:
+        score, matched_terms = _best_fuzzy_chunk_score(query_terms, chunk.text)
+        if not score:
+            continue
+        scored_chunks.append((score, -len(matched_terms), chunk.chunk_index, chunk.id, chunk))
+        score_by_chunk_id[chunk.id] = score
+        signals_by_chunk_id[chunk.id] = {
+            "matched_terms": list(matched_terms),
+            "score": score,
+        }
+
+    scored_chunks.sort(key=lambda item: (-item[0], item[1], item[2], item[3]))
+    selected = [
+        item[-1]
+        for item in scored_chunks[: get_hybrid_fuzzy_candidates()]
+    ]
+    metadata["candidate_count"] = len(selected)
+    metadata["candidate_chunk_indexes"] = [chunk.chunk_index for chunk in selected]
+    return selected, score_by_chunk_id, signals_by_chunk_id, metadata
+
+
 def _rrf_score(vector_rank, lexical_rank, rrf_k):
     score = 0.0
     if vector_rank is not None:
@@ -1111,6 +1286,21 @@ def _hybrid_search_payload(document, normalized_query, limit, provider, base_que
         chunk.id: float(chunk.lexical_score)
         for chunk in lexical_chunks
     }
+    fuzzy_chunks, fuzzy_score_by_chunk_id, fuzzy_signals_by_chunk_id, fuzzy_metadata = (
+        _fuzzy_candidates(
+            document,
+            lexical_query_plan,
+            provider,
+            set(lexical_rank_by_chunk_id),
+        )
+    )
+    combined_lexical_chunks = list(lexical_chunks)
+    for chunk in fuzzy_chunks:
+        if chunk.id in lexical_rank_by_chunk_id:
+            continue
+        lexical_rank_by_chunk_id[chunk.id] = len(combined_lexical_chunks) + 1
+        lexical_score_by_chunk_id[chunk.id] = fuzzy_score_by_chunk_id.get(chunk.id)
+        combined_lexical_chunks.append(chunk)
     candidate_chunk_ids = set(vector_rank_by_chunk_id) | set(lexical_rank_by_chunk_id)
 
     try:
@@ -1182,11 +1372,18 @@ def _hybrid_search_payload(document, normalized_query, limit, provider, base_que
             "rerank_enabled": get_hybrid_rerank_enabled(),
             "rrf_k": rrf_k,
             "vector_candidate_count": len(vector_embeddings),
-            "lexical_candidate_count": len(lexical_chunks),
+            "lexical_candidate_count": len(combined_lexical_chunks),
+            "postgres_fts_candidate_count": len(lexical_chunks),
+            "fuzzy_candidate_count": len(fuzzy_chunks),
             "requested_vector_candidates": vector_limit,
             "requested_lexical_candidates": lexical_limit,
             "lexical_config": lexical_config,
             "lexical_search": "postgres_full_text_search",
+            "fuzzy_matching": fuzzy_metadata,
+            "fuzzy_candidate_signals": {
+                str(chunk_id): signals
+                for chunk_id, signals in fuzzy_signals_by_chunk_id.items()
+            },
             "query_expansion": lexical_query_plan.expansion_enabled,
             "expanded_terms": list(lexical_query_plan.expanded_terms),
             "lexical_query_terms": list(lexical_query_plan.query_terms),

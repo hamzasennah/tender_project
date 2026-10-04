@@ -34,6 +34,7 @@ from extraction.services.rag import (
     NOT_FOUND_ANSWER,
     _decompose_rag_question,
 )
+from extraction.services.semantic_search import _best_fuzzy_chunk_score
 from extraction.services.raptor.clustering import cluster_embeddings
 from extraction.services.raptor.types import RaptorCluster
 
@@ -1678,6 +1679,161 @@ class TextExtractionAPITests(APITestCase):
         )
         self.assertIsNone(lexical_result["vector_rank"])
         self.assertEqual(lexical_result["lexical_rank"], 1)
+
+    def test_fuzzy_keeps_exact_lexical_match_first(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Clause generale sur le calendrier.",
+                "Livraison finale des dossiers administratifs.",
+            ]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(1))
+        provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        self.authenticate()
+
+        response = self.run_search_request(
+            document,
+            provider,
+            query="livraison finale",
+            top_k=2,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["results"][0]["chunk_id"], chunks[1].id)
+        self.assertEqual(response.data["results"][0]["lexical_rank"], 1)
+        self.assertEqual(
+            response.data["search_metadata"]["fuzzy_matching"]["library"],
+            "python_stdlib_difflib",
+        )
+
+    def test_fuzzy_candidate_recovers_small_typo(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Passage semantique sans terme cible.",
+                "La livrasion finale sera confirmee par avis.",
+            ]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(1))
+        provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        self.authenticate()
+
+        with override_settings(HYBRID_VECTOR_CANDIDATES=1, HYBRID_LEXICAL_CANDIDATES=1):
+            response = self.run_search_request(
+                document,
+                provider,
+                query="livraison",
+                top_k=2,
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        fuzzy_result = next(
+            result for result in response.data["results"] if result["chunk_id"] == chunks[1].id
+        )
+        self.assertIsNone(fuzzy_result["vector_rank"])
+        self.assertEqual(fuzzy_result["lexical_rank"], 1)
+        self.assertEqual(response.data["search_metadata"]["fuzzy_candidate_count"], 1)
+
+    def test_fuzzy_candidate_recovers_small_ocr_corruption(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Passage administratif sans correspondance.",
+                "La livra1son provisoire est planifiee demain.",
+            ]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(1))
+        provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        self.authenticate()
+
+        with override_settings(HYBRID_VECTOR_CANDIDATES=1, HYBRID_LEXICAL_CANDIDATES=1):
+            response = self.run_search_request(
+                document,
+                provider,
+                query="livraison",
+                top_k=2,
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            any(result["chunk_id"] == chunks[1].id for result in response.data["results"])
+        )
+        self.assertEqual(response.data["search_metadata"]["fuzzy_candidate_count"], 1)
+
+    def test_fuzzy_matching_handles_accents_and_punctuation(self):
+        score, matched_terms = _best_fuzzy_chunk_score(
+            ("execution",),
+            "Garantie d'exécution, controlee apres cloture.",
+        )
+
+        self.assertEqual(matched_terms, ("execution",))
+        self.assertEqual(score, 1.0)
+
+    def test_fuzzy_matching_rejects_clearly_different_term(self):
+        score, matched_terms = _best_fuzzy_chunk_score(
+            ("livraison",),
+            "planning financier sans correspondance utile.",
+        )
+
+        self.assertEqual(score, 0.0)
+        self.assertEqual(matched_terms, ())
+
+    def test_fuzzy_does_not_add_unrelated_chunks(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Passage semantique general.",
+                "Planning financier sans correspondance utile.",
+            ]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(1))
+        provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        self.authenticate()
+
+        with override_settings(HYBRID_VECTOR_CANDIDATES=1, HYBRID_LEXICAL_CANDIDATES=1):
+            response = self.run_search_request(
+                document,
+                provider,
+                query="livraison",
+                top_k=2,
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["search_metadata"]["fuzzy_candidate_count"], 0)
+        self.assertFalse(
+            any(result["chunk_id"] == chunks[1].id for result in response.data["results"])
+        )
+
+    def test_fuzzy_scan_limit_bounds_candidate_recovery(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Premier chunk sans correspondance.",
+                "La livrasion finale sera confirmee par avis.",
+            ]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(1))
+        provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        self.authenticate()
+
+        with override_settings(
+            HYBRID_VECTOR_CANDIDATES=1,
+            HYBRID_LEXICAL_CANDIDATES=1,
+            HYBRID_FUZZY_SCAN_LIMIT=1,
+        ):
+            response = self.run_search_request(
+                document,
+                provider,
+                query="livraison",
+                top_k=2,
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        fuzzy_metadata = response.data["search_metadata"]["fuzzy_matching"]
+        self.assertEqual(fuzzy_metadata["scan_limit"], 1)
+        self.assertEqual(fuzzy_metadata["scanned_chunk_count"], 1)
+        self.assertEqual(response.data["search_metadata"]["fuzzy_candidate_count"], 0)
 
     def test_vector_only_candidate_can_reach_final_results(self):
         document, _extraction_result, chunks = self.create_document_with_chunks(
