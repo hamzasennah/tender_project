@@ -434,11 +434,143 @@ class TextExtractionAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertFalse(TextExtractionResult.objects.filter(document=document).exists())
 
+    def test_new_extraction_invalidates_artifacts_until_rebuild(self):
+        document = self.create_document(
+            content=text_pdf_bytes("Initial alpha answer for search."),
+        )
+        self.authenticate()
+
+        self.assertEqual(
+            self.client.post(self.extraction_url(document)).status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(self.client.post(self.chunking_url(document)).status_code, status.HTTP_200_OK)
+        embedding_provider = FakeEmbeddingProvider(
+            vectors=lambda texts: [basis_vector(0) for _text in texts]
+        )
+        self.assertEqual(
+            self.run_embedding_request(document, embedding_provider).status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(self.run_raptor_request(document).status_code, status.HTTP_200_OK)
+        self.assertTrue(TextChunk.objects.filter(document=document).exists())
+        self.assertTrue(ChunkEmbedding.objects.filter(chunk__document=document).exists())
+        self.assertTrue(RaptorIndex.objects.filter(document=document).exists())
+
+        search_provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        self.assertEqual(
+            self.run_search_request(document, search_provider, query="alpha").status_code,
+            status.HTTP_200_OK,
+        )
+
+        document.file.save(
+            document.stored_filename,
+            SimpleUploadedFile(
+                "replacement.pdf",
+                text_pdf_bytes("Replacement bravo answer for search."),
+                content_type="application/pdf",
+            ),
+            save=True,
+        )
+        response = self.client.post(self.extraction_url(document))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["extracted_text"], "Replacement bravo answer for search.")
+        self.assertFalse(TextChunk.objects.filter(document=document).exists())
+        self.assertFalse(ChunkEmbedding.objects.filter(chunk__document=document).exists())
+        self.assertFalse(RaptorIndex.objects.filter(document=document).exists())
+
+        search_response = self.run_search_request(document, search_provider, query="bravo")
+        self.assertEqual(search_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(search_response.data["error_code"], "chunks_not_found")
+
+        rag_llm = FakeLLMProvider(answer="Should not be called.")
+        rag_response = self.run_rag_request(
+            document,
+            search_provider,
+            rag_llm,
+            question="What is bravo?",
+        )
+        self.assertEqual(rag_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(rag_response.data["error_code"], "chunks_not_found")
+        self.assertEqual(rag_llm.calls, [])
+
+        raptor_response = self.run_raptor_ask_request(document, question="What is bravo?")
+        self.assertEqual(raptor_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(raptor_response.data["error_code"], "raptor_index_not_found")
+
+        self.assertEqual(self.client.post(self.chunking_url(document)).status_code, status.HTTP_200_OK)
+        rebuilt_embedding_provider = FakeEmbeddingProvider(
+            vectors=lambda texts: [basis_vector(0) for _text in texts]
+        )
+        self.assertEqual(
+            self.run_embedding_request(document, rebuilt_embedding_provider).status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(self.run_raptor_request(document).status_code, status.HTTP_200_OK)
+        rebuilt_search = self.run_search_request(document, search_provider, query="bravo")
+        self.assertEqual(rebuilt_search.status_code, status.HTTP_200_OK)
+        rebuilt_rag = self.run_rag_request(
+            document,
+            search_provider,
+            FakeLLMProvider(answer="Replacement bravo answer for search."),
+            question="What is bravo?",
+        )
+        self.assertEqual(rebuilt_rag.status_code, status.HTTP_200_OK)
+        rebuilt_raptor = self.run_raptor_ask_request(
+            document,
+            question="What is bravo?",
+            llm_provider=FakeLLMProvider(answer="Replacement bravo answer for search."),
+        )
+        self.assertEqual(rebuilt_raptor.status_code, status.HTTP_200_OK)
+
+    def test_failed_new_extraction_does_not_leave_old_artifacts_usable(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            ["Initial alpha answer for stale artifacts."]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        index = self.create_completed_raptor_index(document)
+        self.create_raptor_node(
+            index,
+            document,
+            0,
+            0,
+            chunks[0].text,
+            source_chunk=chunks[0],
+        )
+        self.authenticate()
+
+        document.file.save(
+            document.stored_filename,
+            SimpleUploadedFile(
+                "broken.pdf",
+                b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n",
+                content_type="application/pdf",
+            ),
+            save=True,
+        )
+        response = self.client.post(self.extraction_url(document))
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["status"], TextExtractionResult.Status.FAILED)
+        self.assertFalse(TextChunk.objects.filter(document=document).exists())
+        self.assertFalse(ChunkEmbedding.objects.filter(chunk__document=document).exists())
+        self.assertFalse(RaptorIndex.objects.filter(document=document).exists())
+
+        provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        search_response = self.run_search_request(document, provider, query="alpha")
+        self.assertEqual(search_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(search_response.data["error_code"], "chunks_not_found")
+        raptor_response = self.run_raptor_ask_request(document, question="alpha")
+        self.assertEqual(raptor_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(raptor_response.data["error_code"], "raptor_index_not_found")
+
     def test_blank_pdf_completes_with_no_extractable_text(self):
         document = self.create_document(content=blank_pdf_bytes())
         self.authenticate()
 
         with (
+            override_settings(EXTRACTION_OCR_MAX_IMAGE_PIXELS=5_000_000),
             patch(
                 "extraction.services.pdf_text_extraction.convert_from_bytes",
                 side_effect=rendered_ocr_page,
@@ -472,6 +604,7 @@ class TextExtractionAPITests(APITestCase):
         self.authenticate()
 
         with (
+            override_settings(EXTRACTION_OCR_MAX_IMAGE_PIXELS=5_000_000),
             patch(
                 "extraction.services.pdf_text_extraction.convert_from_bytes",
                 side_effect=rendered_ocr_page,
@@ -513,6 +646,7 @@ class TextExtractionAPITests(APITestCase):
         self.authenticate()
 
         with (
+            override_settings(EXTRACTION_OCR_MAX_IMAGE_PIXELS=5_000_000),
             patch(
                 "extraction.services.pdf_text_extraction.convert_from_bytes",
                 side_effect=rendered_ocr_page,
@@ -554,6 +688,7 @@ class TextExtractionAPITests(APITestCase):
         self.authenticate()
 
         with (
+            override_settings(EXTRACTION_OCR_MAX_IMAGE_PIXELS=5_000_000),
             patch(
                 "extraction.services.pdf_text_extraction.convert_from_bytes",
                 side_effect=rendered_ocr_page,
@@ -691,6 +826,136 @@ class TextExtractionAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
         self.assertEqual(response.data["status"], TextExtractionResult.Status.FAILED)
         self.assertEqual(response.data["error_code"], "rendered_image_too_large")
+
+    def test_ocr_estimated_page_size_limit_is_enforced_before_rendering(self):
+        writer = PdfWriter()
+        writer.add_blank_page(width=10_000, height=10_000)
+        output = BytesIO()
+        writer.write(output)
+        document = self.create_document(content=output.getvalue())
+        self.authenticate()
+
+        with (
+            override_settings(EXTRACTION_OCR_MAX_IMAGE_PIXELS=10_000),
+            patch("extraction.services.pdf_text_extraction.convert_from_bytes") as render,
+        ):
+            response = self.client.post(self.extraction_url(document))
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["status"], TextExtractionResult.Status.FAILED)
+        self.assertEqual(response.data["error_code"], "rendered_image_too_large")
+        render.assert_not_called()
+
+    def test_rendered_image_size_limit_remains_secondary_defense(self):
+        document = self.create_document(content=blank_pdf_bytes())
+        self.authenticate()
+
+        with (
+            override_settings(EXTRACTION_OCR_MAX_IMAGE_PIXELS=50_000),
+            patch(
+                "extraction.services.pdf_text_extraction.convert_from_bytes",
+                return_value=[Image.new("RGB", (300, 300), "white")],
+            ) as render,
+        ):
+            response = self.client.post(self.extraction_url(document))
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["status"], TextExtractionResult.Status.FAILED)
+        self.assertEqual(response.data["error_code"], "rendered_image_too_large")
+        render.assert_called_once()
+
+    def test_page_content_stream_normal_path_still_reads_data(self):
+        from extraction.services.pdf_text_extraction import get_page_content_size
+
+        class FakeStream:
+            def __init__(self):
+                self._data = b"BT"
+                self.get_data_called = False
+
+            def get(self, key):
+                return 2 if key == "/Length" else None
+
+            def get_data(self):
+                self.get_data_called = True
+                return b"BT"
+
+        class FakePage:
+            def __init__(self, contents):
+                self.contents = contents
+
+            def get(self, key):
+                return self.contents if key == "/Contents" else None
+
+        stream = FakeStream()
+
+        self.assertEqual(get_page_content_size(FakePage([stream]), page_number=1), 2)
+        self.assertTrue(stream.get_data_called)
+
+    def test_page_content_declared_limit_rejects_before_get_data(self):
+        from extraction.services.pdf_text_extraction import (
+            TextExtractionError,
+            get_page_content_size,
+        )
+
+        class FakeStream:
+            _data = b"short"
+            get_data_called = False
+
+            def get(self, key):
+                return 10_000 if key == "/Length" else None
+
+            def get_data(self):
+                self.get_data_called = True
+                return b"x"
+
+        class FakePage:
+            def __init__(self, contents):
+                self.contents = contents
+
+            def get(self, key):
+                return self.contents if key == "/Contents" else None
+
+        stream = FakeStream()
+
+        with override_settings(EXTRACTION_MAX_PAGE_CONTENT_BYTES=99):
+            with self.assertRaises(TextExtractionError) as caught:
+                get_page_content_size(FakePage(stream), page_number=1)
+
+        self.assertEqual(caught.exception.code, "page_content_too_large")
+        self.assertFalse(stream.get_data_called)
+
+    def test_page_content_raw_limit_rejects_before_get_data(self):
+        from extraction.services.pdf_text_extraction import (
+            TextExtractionError,
+            get_page_content_size,
+        )
+
+        class FakeStream:
+            _data = b"x" * 100
+            get_data_called = False
+
+            def get(self, key):
+                return None
+
+            def get_data(self):
+                self.get_data_called = True
+                return b"x"
+
+        class FakePage:
+            def __init__(self, contents):
+                self.contents = contents
+
+            def get(self, key):
+                return self.contents if key == "/Contents" else None
+
+        stream = FakeStream()
+
+        with override_settings(EXTRACTION_MAX_PAGE_CONTENT_BYTES=99):
+            with self.assertRaises(TextExtractionError) as caught:
+                get_page_content_size(FakePage([stream]), page_number=1)
+
+        self.assertEqual(caught.exception.code, "page_content_too_large")
+        self.assertFalse(stream.get_data_called)
 
     def test_encrypted_pdf_fails_with_controlled_error(self):
         document = self.create_document(content=encrypted_pdf_bytes())

@@ -5,7 +5,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-import run_benchmark
+from benchmark import run_benchmark
 
 
 class FakeLLMProvider:

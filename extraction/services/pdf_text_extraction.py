@@ -1,10 +1,12 @@
 import hashlib
 import logging
+import math
 import re
 from dataclasses import dataclass
 from io import BytesIO
 
 from django.conf import settings
+from django.db import transaction
 from pdf2image import convert_from_bytes
 from pdf2image.exceptions import (
     PDFInfoNotInstalledError,
@@ -25,7 +27,7 @@ from pypdf.errors import (
 import pytesseract
 from pytesseract.pytesseract import TesseractError, TesseractNotFoundError
 
-from extraction.models import TextExtractionResult
+from extraction.models import RaptorIndex, TextChunk, TextExtractionResult
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,7 @@ DEFAULT_OCR_DPI = 200
 DEFAULT_OCR_MAX_IMAGE_PIXELS = 20_000_000
 DEFAULT_OCR_TIMEOUT_SECONDS = 30
 DEFAULT_OCR_MAX_TEXT_CHARS_PER_PAGE = 100_000
+PDF_POINTS_PER_INCH = 72
 
 SOURCE_NATIVE = "native"
 SOURCE_OCR = "ocr"
@@ -223,12 +226,108 @@ def is_usable_text(text):
     return measure_text_usability(text).usable
 
 
-def get_page_content_size(page):
-    contents = page.get_contents()
+def _resolve_pdf_object(value, page_number):
+    try:
+        return value.get_object() if hasattr(value, "get_object") else value
+    except (PdfReadError, OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+        raise TextExtractionError(
+            "page_content_unreadable",
+            "PDF page content streams could not be inspected safely.",
+            f"page={page_number}; {exc.__class__.__name__}",
+        ) from exc
+
+
+def _content_stream_objects(contents, page_number):
+    contents = _resolve_pdf_object(contents, page_number)
     if contents is None:
+        return []
+
+    if isinstance(contents, (list, tuple)) or contents.__class__.__name__ == "ArrayObject":
+        streams = []
+        for item in contents:
+            streams.extend(_content_stream_objects(item, page_number))
+        return streams
+
+    if not hasattr(contents, "get_data"):
+        raise TextExtractionError(
+            "unsupported_pdf_content_stream",
+            "PDF page content streams could not be inspected safely.",
+            f"page={page_number}; type={contents.__class__.__name__}",
+        )
+
+    return [contents]
+
+
+def _stream_declared_length(stream, page_number):
+    if not hasattr(stream, "get"):
+        return None
+    try:
+        value = stream.get("/Length")
+        value = _resolve_pdf_object(value, page_number)
+        return int(value) if value is not None else None
+    except (TypeError, ValueError, OSError):
+        return None
+
+
+def _stream_raw_size(stream):
+    data = getattr(stream, "_data", None)
+    if data is None:
+        return None
+    try:
+        return len(data)
+    except TypeError:
+        return None
+
+
+def _reject_oversized_page_content(page_number, byte_count, source):
+    if byte_count > get_max_page_content_bytes():
+        raise TextExtractionError(
+            "page_content_too_large",
+            "A PDF page content stream exceeds the configured extraction limit.",
+            f"page={page_number}; {source}_bytes={byte_count}",
+        )
+
+
+def _prevalidate_content_streams(page, page_number):
+    contents = page.get("/Contents")
+    streams = _content_stream_objects(contents, page_number)
+    declared_total = 0
+    raw_total = 0
+
+    for stream in streams:
+        declared_length = _stream_declared_length(stream, page_number)
+        if declared_length is not None:
+            declared_total += declared_length
+            _reject_oversized_page_content(page_number, declared_total, "declared")
+
+        raw_size = _stream_raw_size(stream)
+        if raw_size is not None:
+            raw_total += raw_size
+            _reject_oversized_page_content(page_number, raw_total, "raw")
+
+    return streams
+
+
+def get_page_content_size(page, page_number=None):
+    page_number = page_number or 0
+    streams = _prevalidate_content_streams(page, page_number)
+    if not streams:
         return 0
-    data = contents.get_data()
-    return len(data)
+
+    total_size = 0
+    for stream in streams:
+        try:
+            data = stream.get_data()
+        except (PdfReadError, OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+            raise TextExtractionError(
+                "page_content_unreadable",
+                "PDF page content streams could not be read safely.",
+                f"page={page_number}; {exc.__class__.__name__}",
+            ) from exc
+        total_size += len(data)
+        _reject_oversized_page_content(page_number, total_size, "decoded")
+
+    return total_size
 
 
 def _read_document_bytes(document):
@@ -252,13 +351,7 @@ def _read_document_bytes(document):
 
 
 def _extract_native_page_text(page, page_number):
-    content_size = get_page_content_size(page)
-    if content_size > get_max_page_content_bytes():
-        raise TextExtractionError(
-            "page_content_too_large",
-            "A PDF page content stream exceeds the configured extraction limit.",
-            f"page={page_number}; content_bytes={content_size}",
-        )
+    content_size = get_page_content_size(page, page_number)
 
     page_text = clean_extracted_text(page.extract_text() or "")
     return PageNativeText(
@@ -319,6 +412,64 @@ def _configure_tesseract():
     tesseract_cmd = get_tesseract_cmd()
     if tesseract_cmd:
         pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+
+
+def _page_box_dimensions_points(page):
+    box = getattr(page, "mediabox", None)
+    if box is None:
+        raise TextExtractionError(
+            "invalid_page_dimensions",
+            "PDF page dimensions are invalid for OCR.",
+            "missing_mediabox",
+            metadata={"ocr_status": "failed", "ocr_error_code": "invalid_page_dimensions"},
+        )
+
+    try:
+        width = abs(float(box.width))
+        height = abs(float(box.height))
+        rotation = int(page.get("/Rotate", 0) or 0)
+    except (TypeError, ValueError, OverflowError, AttributeError) as exc:
+        raise TextExtractionError(
+            "invalid_page_dimensions",
+            "PDF page dimensions are invalid for OCR.",
+            exc.__class__.__name__,
+            metadata={"ocr_status": "failed", "ocr_error_code": "invalid_page_dimensions"},
+        ) from exc
+
+    if not all(math.isfinite(value) and value > 0 for value in (width, height)):
+        raise TextExtractionError(
+            "invalid_page_dimensions",
+            "PDF page dimensions are invalid for OCR.",
+            f"width={width}; height={height}",
+            metadata={"ocr_status": "failed", "ocr_error_code": "invalid_page_dimensions"},
+        )
+
+    if rotation % 180:
+        width, height = height, width
+    return width, height
+
+
+def _prevalidate_ocr_page_raster_size(page, page_number):
+    width_points, height_points = _page_box_dimensions_points(page)
+    dpi = get_ocr_dpi()
+    estimated_width_px = max(1, math.ceil((width_points / PDF_POINTS_PER_INCH) * dpi))
+    estimated_height_px = max(1, math.ceil((height_points / PDF_POINTS_PER_INCH) * dpi))
+    estimated_pixels = estimated_width_px * estimated_height_px
+
+    if estimated_pixels > get_ocr_max_image_pixels():
+        raise TextExtractionError(
+            "rendered_image_too_large",
+            "Rendered PDF page image exceeds the configured OCR size limit.",
+            (
+                f"page={page_number}; estimated_pixels={estimated_pixels}; "
+                f"estimated_width_px={estimated_width_px}; "
+                f"estimated_height_px={estimated_height_px}"
+            ),
+            metadata={
+                "ocr_status": "failed",
+                "ocr_error_code": "rendered_image_too_large",
+            },
+        )
 
 
 def _render_page_for_ocr(pdf_bytes, page_number):
@@ -409,8 +560,10 @@ def _validate_rendered_image(image, page_number):
         )
 
 
-def _ocr_page_text(pdf_bytes, page_number):
+def _ocr_page_text(pdf_bytes, page_number, page=None):
     _configure_tesseract()
+    if page is not None:
+        _prevalidate_ocr_page_raster_size(page, page_number)
     image = _render_page_for_ocr(pdf_bytes, page_number)
     ocr_image = None
 
@@ -595,7 +748,7 @@ def extract_text_from_document_file(document):
                         },
                     )
 
-                ocr_text = _ocr_page_text(pdf_bytes, page_number)
+                ocr_text = _ocr_page_text(pdf_bytes, page_number, page)
                 ocr_pages += 1
                 ocr_usability = measure_text_usability(ocr_text)
 
@@ -711,29 +864,37 @@ def extract_text_from_document_file(document):
         ) from exc
 
 
-def extract_document_text(document):
-    result, _ = TextExtractionResult.objects.update_or_create(
-        document=document,
-        defaults={
-            "status": TextExtractionResult.Status.PROCESSING,
-            "extracted_text": "",
-            "has_text": False,
-            "page_count": 0,
-            "pages_processed": 0,
-            "character_count": 0,
-            "text_sha256": "",
-            "extraction_metadata": {
-                "parser": "pypdf",
-                "method": "native_with_ocr_fallback",
-                "ocr_status": "not_used",
-                "source": SOURCE_NATIVE,
-                "limits": _limits_metadata(),
+def _reset_extraction_state(document):
+    with transaction.atomic():
+        RaptorIndex.objects.filter(document=document).delete()
+        TextChunk.objects.filter(document=document).delete()
+        result, _ = TextExtractionResult.objects.update_or_create(
+            document=document,
+            defaults={
+                "status": TextExtractionResult.Status.PROCESSING,
+                "extracted_text": "",
+                "has_text": False,
+                "page_count": 0,
+                "pages_processed": 0,
+                "character_count": 0,
+                "text_sha256": "",
+                "extraction_metadata": {
+                    "parser": "pypdf",
+                    "method": "native_with_ocr_fallback",
+                    "ocr_status": "not_used",
+                    "source": SOURCE_NATIVE,
+                    "limits": _limits_metadata(),
+                },
+                "error_code": "",
+                "error_message": "",
+                "internal_error_detail": "",
             },
-            "error_code": "",
-            "error_message": "",
-            "internal_error_detail": "",
-        },
-    )
+        )
+    return result
+
+
+def extract_document_text(document):
+    result = _reset_extraction_state(document)
 
     logger.info(
         "PDF text extraction started",
