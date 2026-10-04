@@ -144,6 +144,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "dashboard"
+LOGOUT_REDIRECT_URL = "login"
 
 _media_root = Path(os.getenv("DJANGO_MEDIA_ROOT", "media"))
 MEDIA_ROOT = _media_root if _media_root.is_absolute() else BASE_DIR / _media_root

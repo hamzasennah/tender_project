@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="split-layout">
+    <div class="panel upload-panel">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Import</p>
+                <h2>Upload PDF</h2>
+            </div>
+        </div>
+        <form class="upload-form" action="{% url 'document-list' %}" method="post" enctype="multipart/form-data" data-upload-form>
+            {% csrf_token %}
+            <label class="dropzone" data-dropzone>
+                <input type="file" name="file" accept="application/pdf" required data-file-input>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"></path></svg>
+                <strong>Drag & drop your document</strong>
+                <span>or browse from your device</span>
+                <small>PDF &middot; Max {{ max_upload_size_mb }} MB</small>
+            </label>
+            <div class="upload-selection" data-upload-selection hidden></div>
+            <button class="button button-primary full-width" type="submit" data-upload-submit>Import document</button>
+        </form>
+    </div>
+
+    <div class="panel library-panel">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Documents</p>
+                <h2>Document library</h2>
+            </div>
+            <label class="search-field">
+                <span class="sr-only">Filter documents</span>
+                <input type="search" placeholder="Filter by filename" data-document-filter>
+            </label>
+        </div>
+
+        {% if documents %}
+            <div class="document-list" data-document-list>
+                {% for item in documents %}
+                    <article class="document-row" data-document-row data-search-text="{{ item.document.original_filename|lower }}">
+                        <div class="document-primary">
+                            <div class="file-icon">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4v13H7z"></path><path d="M14 3.5v4h4"></path></svg>
+                            </div>
+                            <div>
+                                <h3>{{ item.document.original_filename }}</h3>
+                                <p>{{ item.document.created_at|date:"M d, Y H:i" }} &middot; {{ item.pipeline_status }}</p>
+                            </div>
+                        </div>
+                        <div class="row-meta">
+                            {% include "components/status_badge.html" with status=item.document.status label=item.document.status %}
+                            {% if item.page_count %}<span>{{ item.page_count }} pages</span>{% endif %}
+                            <a class="icon-button" href="{% url 'web-document-detail' item.document.id %}" aria-label="Open {{ item.document.original_filename }}">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+                            </a>
+                            <a class="icon-button" href="{% url 'document-download' item.document.id %}" aria-label="Download {{ item.document.original_filename }}">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10M8 10l4 4 4-4M5 20h14"></path></svg>
+                            </a>
+                            <button class="icon-button danger" type="button" data-delete-document data-delete-url="{% url 'document-detail' item.document.id %}" data-delete-redirect="" aria-label="Delete {{ item.document.original_filename }}">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M8 7l1-3h6l1 3M7 7l1 13h8l1-13"></path></svg>
+                            </button>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>No documents yet</h3>
+                <p>Upload your first tender document to start analyzing it.</p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/documents.js' %}"></script>
+{% endblock %}

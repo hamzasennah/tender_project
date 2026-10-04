@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero-panel">
+    <div>
+        <p class="eyebrow">{{ greeting }}, {{ request.user.username }}</p>
+        <h2>Document intelligence workspace</h2>
+        <p class="hero-copy">Track your tender library, prepare documents for analysis, and open the right reasoning workflow when the pipeline is ready.</p>
+    </div>
+    <a class="button button-primary" href="{% url 'web-document-list' %}">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        Import document
+    </a>
+</section>
+
+<section class="metric-grid" aria-label="Workspace metrics">
+    <article class="metric-tile">
+        <span>Documents</span>
+        <strong>{{ document_count }}</strong>
+    </article>
+    <article class="metric-tile">
+        <span>Processed</span>
+        <strong>{{ completed_count }}</strong>
+    </article>
+    <article class="metric-tile">
+        <span>Processing</span>
+        <strong>{{ processing_count }}</strong>
+    </article>
+    <article class="metric-tile">
+        <span>Failed</span>
+        <strong>{{ failed_count }}</strong>
+    </article>
+</section>
+
+<section class="section-block">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Library</p>
+            <h2>Recent documents</h2>
+        </div>
+        <a class="text-link" href="{% url 'web-document-list' %}">View all</a>
+    </div>
+
+    {% if recent_documents %}
+        <div class="document-list compact">
+            {% for item in recent_documents %}
+                <article class="document-row">
+                    <div class="document-primary">
+                        <div class="file-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4v13H7z"></path><path d="M14 3.5v4h4"></path></svg>
+                        </div>
+                        <div>
+                            <h3>{{ item.document.original_filename }}</h3>
+                            <p>{{ item.document.created_at|date:"M d, Y H:i" }} &middot; {{ item.pipeline_status }}</p>
+                        </div>
+                    </div>
+                    <div class="row-meta">
+                        {% include "components/status_badge.html" with status=item.document.status label=item.document.status %}
+                        {% if item.page_count %}<span>{{ item.page_count }} pages</span>{% endif %}
+                        <a class="button button-secondary" href="{% url 'web-document-detail' item.document.id %}">Open</a>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>No documents yet</h3>
+            <p>Upload your first tender document to start analyzing it.</p>
+            <a class="button button-primary" href="{% url 'web-document-list' %}">Import document</a>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}
