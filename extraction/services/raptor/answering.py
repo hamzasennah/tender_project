@@ -352,6 +352,7 @@ def answer_raptor_question(
                 "candidate_count_per_level",
                 {},
             ),
+            "top_down": retrieval_metadata.get("top_down"),
             "context_char_count": context.metadata["context_char_count"],
             "context_truncated": context.metadata["context_truncated"],
             "context": context.metadata,

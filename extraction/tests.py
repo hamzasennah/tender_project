@@ -4474,7 +4474,7 @@ class TextExtractionAPITests(APITestCase):
         self.assertIn(2, levels)
         self.assertEqual(
             response.data["raptor_metadata"]["retrieval_strategy"],
-            "hierarchical_vector_retrieval",
+            "hierarchical_top_down_vector_retrieval",
         )
 
     def test_raptor_ask_uses_bounded_parent_child_expansion(self):
@@ -4571,6 +4571,475 @@ class TextExtractionAPITests(APITestCase):
 
         self.assertEqual(candidates[0].node_id, relevant_child.id)
         self.assertEqual(candidates[1].node_id, wrong_child.id)
+
+    def test_raptor_top_down_traverses_root_intermediate_leaf(self):
+        from extraction.services.raptor.retrieval import retrieve_raptor_nodes
+
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            ["Relevant delivery detail.", "Unrelated branch detail."]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(1))
+        index = self.create_completed_raptor_index(document)
+        relevant_leaf = self.create_raptor_node(
+            index,
+            document,
+            0,
+            0,
+            chunks[0].text,
+            source_chunk=chunks[0],
+        )
+        unrelated_leaf = self.create_raptor_node(
+            index,
+            document,
+            0,
+            1,
+            chunks[1].text,
+            source_chunk=chunks[1],
+        )
+        intermediate = self.create_raptor_node(
+            index,
+            document,
+            1,
+            0,
+            "Intermediate summary about delivery.",
+            vector=basis_vector(0),
+        )
+        unrelated_intermediate = self.create_raptor_node(
+            index,
+            document,
+            1,
+            1,
+            "Intermediate summary about unrelated matters.",
+            vector=basis_vector(1),
+        )
+        root = self.create_raptor_node(
+            index,
+            document,
+            2,
+            0,
+            "Root summary about delivery.",
+            vector=basis_vector(0),
+        )
+        unrelated_root = self.create_raptor_node(
+            index,
+            document,
+            2,
+            1,
+            "Root summary about unrelated matters.",
+            vector=basis_vector(1),
+        )
+        RaptorNodeChild.objects.create(parent=root, child=intermediate, child_rank=0)
+        RaptorNodeChild.objects.create(parent=intermediate, child=relevant_leaf, child_rank=0)
+        RaptorNodeChild.objects.create(
+            parent=unrelated_root,
+            child=unrelated_intermediate,
+            child_rank=0,
+        )
+        RaptorNodeChild.objects.create(
+            parent=unrelated_intermediate,
+            child=unrelated_leaf,
+            child_rank=0,
+        )
+
+        with override_settings(
+            RAPTOR_RETRIEVAL_STRATEGY="top_down",
+            RAPTOR_TOP_DOWN_BEAM_WIDTH=1,
+        ):
+            payload = retrieve_raptor_nodes(
+                document,
+                "delivery",
+                top_k=3,
+                provider=FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)]),
+            )
+
+        node_ids = {result.node_id for result in payload["results"]}
+        self.assertIn(root.id, node_ids)
+        self.assertIn(intermediate.id, node_ids)
+        self.assertIn(relevant_leaf.id, node_ids)
+        self.assertNotIn(unrelated_leaf.id, node_ids)
+        self.assertEqual(
+            payload["retrieval_metadata"]["retrieval_strategy"],
+            "hierarchical_top_down_vector_retrieval",
+        )
+
+    def test_raptor_top_down_respects_max_depth(self):
+        from extraction.services.raptor.retrieval import retrieve_raptor_nodes
+
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            ["Deep leaf detail."]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        index = self.create_completed_raptor_index(document)
+        leaf = self.create_raptor_node(
+            index,
+            document,
+            0,
+            0,
+            chunks[0].text,
+            source_chunk=chunks[0],
+        )
+        intermediate = self.create_raptor_node(
+            index,
+            document,
+            1,
+            0,
+            "Intermediate summary.",
+            vector=basis_vector(0),
+        )
+        root = self.create_raptor_node(
+            index,
+            document,
+            2,
+            0,
+            "Root summary.",
+            vector=basis_vector(0),
+        )
+        RaptorNodeChild.objects.create(parent=root, child=intermediate, child_rank=0)
+        RaptorNodeChild.objects.create(parent=intermediate, child=leaf, child_rank=0)
+
+        with override_settings(
+            RAPTOR_RETRIEVAL_STRATEGY="top_down",
+            RAPTOR_TOP_DOWN_MAX_DEPTH=1,
+        ):
+            payload = retrieve_raptor_nodes(
+                document,
+                "detail",
+                top_k=3,
+                provider=FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)]),
+            )
+
+        node_ids = {result.node_id for result in payload["results"]}
+        self.assertIn(root.id, node_ids)
+        self.assertIn(intermediate.id, node_ids)
+        self.assertNotIn(leaf.id, node_ids)
+        self.assertEqual(payload["retrieval_metadata"]["top_down"]["depth_reached"], 1)
+
+    def test_raptor_top_down_respects_beam_width(self):
+        from extraction.services.raptor.retrieval import retrieve_raptor_nodes
+
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            ["Primary branch leaf.", "Secondary branch leaf."]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(1))
+        index = self.create_completed_raptor_index(document)
+        primary_leaf = self.create_raptor_node(
+            index,
+            document,
+            0,
+            0,
+            chunks[0].text,
+            source_chunk=chunks[0],
+        )
+        secondary_leaf = self.create_raptor_node(
+            index,
+            document,
+            0,
+            1,
+            chunks[1].text,
+            source_chunk=chunks[1],
+        )
+        primary_root = self.create_raptor_node(
+            index,
+            document,
+            1,
+            0,
+            "Primary root.",
+            vector=basis_vector(0),
+        )
+        secondary_root = self.create_raptor_node(
+            index,
+            document,
+            1,
+            1,
+            "Secondary root.",
+            vector=basis_vector(1),
+        )
+        RaptorNodeChild.objects.create(parent=primary_root, child=primary_leaf, child_rank=0)
+        RaptorNodeChild.objects.create(parent=secondary_root, child=secondary_leaf, child_rank=0)
+
+        with override_settings(
+            RAPTOR_RETRIEVAL_STRATEGY="top_down",
+            RAPTOR_TOP_DOWN_BEAM_WIDTH=1,
+        ):
+            payload = retrieve_raptor_nodes(
+                document,
+                "primary",
+                top_k=4,
+                provider=FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)]),
+            )
+
+        node_ids = {result.node_id for result in payload["results"]}
+        self.assertIn(primary_leaf.id, node_ids)
+        self.assertNotIn(secondary_leaf.id, node_ids)
+        self.assertEqual(payload["retrieval_metadata"]["top_down"]["beam_width"], 1)
+
+    def test_raptor_top_down_factual_leaf_remains_accessible(self):
+        from extraction.services.raptor.retrieval import retrieve_raptor_nodes
+
+        factual_vector = [0.0] * 768
+        factual_vector[0] = 0.72
+        factual_vector[1] = 0.69
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Generic root branch detail.",
+                "Date limite de depot : 12 avril 2032.",
+            ]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], factual_vector)
+        index = self.create_completed_raptor_index(document)
+        generic_leaf = self.create_raptor_node(
+            index,
+            document,
+            0,
+            0,
+            chunks[0].text,
+            source_chunk=chunks[0],
+        )
+        factual_leaf = self.create_raptor_node(
+            index,
+            document,
+            0,
+            1,
+            chunks[1].text,
+            source_chunk=chunks[1],
+        )
+        generic_root = self.create_raptor_node(
+            index,
+            document,
+            1,
+            0,
+            "Generic root.",
+            vector=basis_vector(0),
+        )
+        missed_root = self.create_raptor_node(
+            index,
+            document,
+            1,
+            1,
+            "Date root.",
+            vector=basis_vector(1),
+        )
+        RaptorNodeChild.objects.create(parent=generic_root, child=generic_leaf, child_rank=0)
+        RaptorNodeChild.objects.create(parent=missed_root, child=factual_leaf, child_rank=0)
+
+        with override_settings(
+            RAPTOR_RETRIEVAL_STRATEGY="top_down",
+            RAPTOR_TOP_DOWN_BEAM_WIDTH=1,
+        ):
+            payload = retrieve_raptor_nodes(
+                document,
+                "Quelle est la date limite de depot ?",
+                top_k=2,
+                provider=FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)]),
+            )
+
+        self.assertIn(factual_leaf.id, {result.node_id for result in payload["results"]})
+
+    def test_raptor_top_down_can_follow_multiple_relevant_branches(self):
+        from extraction.services.raptor.retrieval import retrieve_raptor_nodes
+
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            ["Branch alpha detail.", "Branch beta detail."]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(1))
+        index = self.create_completed_raptor_index(document)
+        alpha_leaf = self.create_raptor_node(
+            index,
+            document,
+            0,
+            0,
+            chunks[0].text,
+            source_chunk=chunks[0],
+        )
+        beta_leaf = self.create_raptor_node(
+            index,
+            document,
+            0,
+            1,
+            chunks[1].text,
+            source_chunk=chunks[1],
+        )
+        alpha_root = self.create_raptor_node(
+            index,
+            document,
+            1,
+            0,
+            "Alpha root.",
+            vector=basis_vector(0),
+        )
+        beta_root = self.create_raptor_node(
+            index,
+            document,
+            1,
+            1,
+            "Beta root.",
+            vector=basis_vector(0),
+        )
+        RaptorNodeChild.objects.create(parent=alpha_root, child=alpha_leaf, child_rank=0)
+        RaptorNodeChild.objects.create(parent=beta_root, child=beta_leaf, child_rank=0)
+
+        with override_settings(
+            RAPTOR_RETRIEVAL_STRATEGY="top_down",
+            RAPTOR_TOP_DOWN_BEAM_WIDTH=2,
+        ):
+            payload = retrieve_raptor_nodes(
+                document,
+                "branches",
+                top_k=4,
+                provider=FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)]),
+            )
+
+        node_ids = {result.node_id for result in payload["results"]}
+        self.assertIn(alpha_leaf.id, node_ids)
+        self.assertIn(beta_leaf.id, node_ids)
+
+    def test_raptor_top_down_multi_intent_covers_separate_branches(self):
+        from extraction.services.raptor.retrieval import retrieve_raptor_nodes
+
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Date limite de depot : 12 avril 2032.",
+                "La duree de validite est de 45 jours.",
+            ]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(1))
+        index = self.create_completed_raptor_index(document)
+        date_leaf = self.create_raptor_node(
+            index,
+            document,
+            0,
+            0,
+            chunks[0].text,
+            source_chunk=chunks[0],
+        )
+        duration_leaf = self.create_raptor_node(
+            index,
+            document,
+            0,
+            1,
+            chunks[1].text,
+            source_chunk=chunks[1],
+        )
+        date_root = self.create_raptor_node(
+            index,
+            document,
+            1,
+            0,
+            "Date root.",
+            vector=basis_vector(0),
+        )
+        duration_root = self.create_raptor_node(
+            index,
+            document,
+            1,
+            1,
+            "Duration root.",
+            vector=basis_vector(1),
+        )
+        RaptorNodeChild.objects.create(parent=date_root, child=date_leaf, child_rank=0)
+        RaptorNodeChild.objects.create(parent=duration_root, child=duration_leaf, child_rank=0)
+
+        def query_vectors(texts):
+            return [
+                basis_vector(1) if "duree" in text.lower() else basis_vector(0)
+                for text in texts
+            ]
+
+        with override_settings(
+            RAPTOR_RETRIEVAL_STRATEGY="top_down",
+            RAPTOR_TOP_DOWN_BEAM_WIDTH=1,
+        ):
+            payload = retrieve_raptor_nodes(
+                document,
+                (
+                    "Quelle est la date limite de depot et "
+                    "quelle est la duree de validite ?"
+                ),
+                top_k=2,
+                provider=FakeEmbeddingProvider(vectors=query_vectors),
+            )
+
+        node_ids = {result.node_id for result in payload["results"]}
+        self.assertIn(date_leaf.id, node_ids)
+        self.assertIn(duration_leaf.id, node_ids)
+        self.assertEqual(
+            payload["retrieval_metadata"]["coverage"],
+            {"subintent_1": True, "subintent_2": True},
+        )
+
+    def test_raptor_top_down_handles_root_without_children(self):
+        from extraction.services.raptor.retrieval import retrieve_raptor_nodes
+
+        document, _extraction_result, _chunks = self.create_document_with_chunks(
+            ["Unattached summary only."]
+        )
+        index = self.create_completed_raptor_index(document)
+        root = self.create_raptor_node(
+            index,
+            document,
+            1,
+            0,
+            "Root without children.",
+            vector=basis_vector(0),
+        )
+
+        with override_settings(RAPTOR_RETRIEVAL_STRATEGY="top_down"):
+            payload = retrieve_raptor_nodes(
+                document,
+                "summary",
+                top_k=1,
+                provider=FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)]),
+            )
+
+        self.assertEqual(payload["results"][0].node_id, root.id)
+        self.assertEqual(payload["retrieval_metadata"]["top_down"]["depth_reached"], 0)
+
+    def test_raptor_top_down_preserves_document_index_isolation(self):
+        from extraction.services.raptor.retrieval import retrieve_raptor_nodes
+
+        own_document, _own_extraction, own_chunks = self.create_document_with_chunks(
+            ["Own document leaf."]
+        )
+        other_document, _other_extraction, other_chunks = self.create_document_with_chunks(
+            ["Other document leaf."]
+        )
+        self.create_chunk_embedding(own_chunks[0], basis_vector(0))
+        self.create_chunk_embedding(other_chunks[0], basis_vector(0))
+        own_index = self.create_completed_raptor_index(own_document)
+        other_index = self.create_completed_raptor_index(other_document)
+        own_leaf = self.create_raptor_node(
+            own_index,
+            own_document,
+            0,
+            0,
+            own_chunks[0].text,
+            source_chunk=own_chunks[0],
+        )
+        other_leaf = self.create_raptor_node(
+            other_index,
+            other_document,
+            0,
+            0,
+            other_chunks[0].text,
+            source_chunk=other_chunks[0],
+        )
+
+        with override_settings(RAPTOR_RETRIEVAL_STRATEGY="top_down"):
+            payload = retrieve_raptor_nodes(
+                own_document,
+                "leaf",
+                top_k=1,
+                provider=FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)]),
+            )
+
+        node_ids = {result.node_id for result in payload["results"]}
+        self.assertIn(own_leaf.id, node_ids)
+        self.assertNotIn(other_leaf.id, node_ids)
 
     def test_raptor_multi_intent_detection_simple_and_protected_phrases(self):
         from extraction.services.raptor.intents import detect_raptor_intents
@@ -4722,7 +5191,7 @@ class TextExtractionAPITests(APITestCase):
         )
         self.assertEqual(
             metadata["retrieval_strategy"],
-            "hierarchical_multi_intent_vector_retrieval",
+            "hierarchical_multi_intent_top_down_vector_retrieval",
         )
         matched = [
             source.get("matched_subintents", [])
@@ -4913,7 +5382,7 @@ class TextExtractionAPITests(APITestCase):
         self.assertFalse(response.data["raptor_metadata"]["multi_intent"])
         self.assertEqual(
             response.data["raptor_metadata"]["retrieval_strategy"],
-            "hierarchical_vector_retrieval",
+            "hierarchical_top_down_vector_retrieval",
         )
 
     def test_raptor_multi_intent_does_not_change_enhanced_rag_decomposition(self):

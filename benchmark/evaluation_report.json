@@ -1,5 +1,5 @@
 {
-  "generated_at_epoch": 1791124078.5430696,
+  "generated_at_epoch": 1791129385.903539,
   "objective": "scientific_generalization_evaluation",
   "uses_document_id_12": false,
   "external_provider_calls": false,
@@ -962,7 +962,7 @@
             "avg_recall@3": null,
             "avg_recall@5": null,
             "avg_recall@k": 0.9259,
-            "avg_mrr": 0.9444
+            "avg_mrr": 1.0
           },
           "questions": [
             {
@@ -1050,7 +1050,8 @@
                 "selected_levels": [
                   0,
                   1,
-                  2
+                  2,
+                  3
                 ],
                 "leaf_coverage": 1.0,
                 "context_included_chunk_indexes": [
@@ -1061,9 +1062,10 @@
                   "subintent_1": true
                 },
                 "selected_nodes_per_level": {
-                  "0": 3,
+                  "0": 2,
                   "1": 1,
-                  "2": 1
+                  "2": 1,
+                  "3": 1
                 }
               },
               "success": true
@@ -1107,7 +1109,7 @@
               "expected_location": "beginning",
               "retrieval_metrics": {
                 "recall@k": 1.0,
-                "mrr": 0.5,
+                "mrr": 1.0,
                 "expected_leaf_chunk_indexes": [
                   2
                 ],
@@ -1149,7 +1151,6 @@
                 ],
                 "selected_levels": [
                   0,
-                  2,
                   3
                 ],
                 "leaf_coverage": 1.0,
@@ -1162,9 +1163,8 @@
                   "subintent_1": true
                 },
                 "selected_nodes_per_level": {
-                  "0": 2,
-                  "3": 1,
-                  "2": 2
+                  "0": 4,
+                  "3": 1
                 }
               },
               "success": true
@@ -1200,8 +1200,8 @@
                   "subintent_3": true
                 },
                 "selected_nodes_per_level": {
-                  "0": 4,
-                  "1": 1
+                  "0": 3,
+                  "1": 2
                 }
               },
               "success": true
@@ -1312,7 +1312,7 @@
             "checks": [
               {
                 "dataset": "small",
-                "summary_node_id": 2195,
+                "summary_node_id": 3034,
                 "level": 1,
                 "fact_id": "zephyr_reference",
                 "fact_type": "reference",
@@ -1321,7 +1321,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2196,
+                "summary_node_id": 3035,
                 "level": 1,
                 "fact_id": "cygnus_amount",
                 "fact_type": "amount",
@@ -1330,7 +1330,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2196,
+                "summary_node_id": 3035,
                 "level": 1,
                 "fact_id": "fenix_obligation",
                 "fact_type": "obligation",
@@ -1339,7 +1339,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2197,
+                "summary_node_id": 3036,
                 "level": 1,
                 "fact_id": "atlas_date",
                 "fact_type": "date",
@@ -1348,7 +1348,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2198,
+                "summary_node_id": 3037,
                 "level": 1,
                 "fact_id": "boreal_duration",
                 "fact_type": "duration",
@@ -1357,7 +1357,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2198,
+                "summary_node_id": 3037,
                 "level": 1,
                 "fact_id": "delta_percentage",
                 "fact_type": "percentage",
@@ -1366,7 +1366,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2198,
+                "summary_node_id": 3037,
                 "level": 1,
                 "fact_id": "ocr_noise",
                 "fact_type": "date",
@@ -1375,7 +1375,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2199,
+                "summary_node_id": 3038,
                 "level": 2,
                 "fact_id": "cygnus_amount",
                 "fact_type": "amount",
@@ -1384,7 +1384,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2199,
+                "summary_node_id": 3038,
                 "level": 2,
                 "fact_id": "fenix_obligation",
                 "fact_type": "obligation",
@@ -1393,7 +1393,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2200,
+                "summary_node_id": 3039,
                 "level": 2,
                 "fact_id": "atlas_date",
                 "fact_type": "date",
@@ -1402,7 +1402,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2200,
+                "summary_node_id": 3039,
                 "level": 2,
                 "fact_id": "boreal_duration",
                 "fact_type": "duration",
@@ -1411,7 +1411,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2200,
+                "summary_node_id": 3039,
                 "level": 2,
                 "fact_id": "delta_percentage",
                 "fact_type": "percentage",
@@ -1420,7 +1420,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2200,
+                "summary_node_id": 3039,
                 "level": 2,
                 "fact_id": "zephyr_reference",
                 "fact_type": "reference",
@@ -1429,7 +1429,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2200,
+                "summary_node_id": 3039,
                 "level": 2,
                 "fact_id": "ocr_noise",
                 "fact_type": "date",
@@ -1438,7 +1438,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2201,
+                "summary_node_id": 3040,
                 "level": 3,
                 "fact_id": "atlas_date",
                 "fact_type": "date",
@@ -1447,7 +1447,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2201,
+                "summary_node_id": 3040,
                 "level": 3,
                 "fact_id": "boreal_duration",
                 "fact_type": "duration",
@@ -1456,7 +1456,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2201,
+                "summary_node_id": 3040,
                 "level": 3,
                 "fact_id": "cygnus_amount",
                 "fact_type": "amount",
@@ -1465,7 +1465,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2201,
+                "summary_node_id": 3040,
                 "level": 3,
                 "fact_id": "delta_percentage",
                 "fact_type": "percentage",
@@ -1474,7 +1474,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2201,
+                "summary_node_id": 3040,
                 "level": 3,
                 "fact_id": "zephyr_reference",
                 "fact_type": "reference",
@@ -1483,7 +1483,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2201,
+                "summary_node_id": 3040,
                 "level": 3,
                 "fact_id": "fenix_obligation",
                 "fact_type": "obligation",
@@ -1492,7 +1492,7 @@
               },
               {
                 "dataset": "small",
-                "summary_node_id": 2201,
+                "summary_node_id": 3040,
                 "level": 3,
                 "fact_id": "ocr_noise",
                 "fact_type": "date",
@@ -1515,7 +1515,7 @@
             "avg_recall@3": null,
             "avg_recall@5": null,
             "avg_recall@k": 0.9259,
-            "avg_mrr": 0.9444
+            "avg_mrr": 1.0
           },
           "questions": [
             {
@@ -1533,7 +1533,8 @@
                 "selected_levels": [
                   0,
                   1,
-                  2
+                  2,
+                  3
                 ],
                 "leaf_coverage": 1.0,
                 "context_included_chunk_indexes": [
@@ -1544,9 +1545,10 @@
                   "subintent_1": true
                 },
                 "selected_nodes_per_level": {
-                  "0": 3,
+                  "0": 2,
                   "1": 1,
-                  "2": 1
+                  "2": 1,
+                  "3": 1
                 }
               },
               "success": true
@@ -1600,7 +1602,8 @@
                 ],
                 "selected_levels": [
                   0,
-                  1
+                  1,
+                  2
                 ],
                 "leaf_coverage": 1.0,
                 "context_included_chunk_indexes": [
@@ -1611,8 +1614,9 @@
                   "subintent_1": true
                 },
                 "selected_nodes_per_level": {
-                  "0": 4,
-                  "1": 1
+                  "0": 3,
+                  "1": 1,
+                  "2": 1
                 }
               },
               "success": true
@@ -1654,7 +1658,7 @@
               "expected_location": "beginning",
               "retrieval_metrics": {
                 "recall@k": 1.0,
-                "mrr": 0.5,
+                "mrr": 1.0,
                 "expected_leaf_chunk_indexes": [
                   2
                 ],
@@ -1822,7 +1826,8 @@
                 "selected_levels": [
                   0,
                   1,
-                  2
+                  2,
+                  3
                 ],
                 "leaf_coverage": 1.0,
                 "context_included_chunk_indexes": [
@@ -1833,9 +1838,10 @@
                   "subintent_1": true
                 },
                 "selected_nodes_per_level": {
-                  "0": 3,
+                  "0": 2,
                   "1": 1,
-                  "2": 1
+                  "2": 1,
+                  "3": 1
                 }
               },
               "success": true
@@ -1845,7 +1851,7 @@
             "checks": [
               {
                 "dataset": "medium",
-                "summary_node_id": 2254,
+                "summary_node_id": 3093,
                 "level": 1,
                 "fact_id": "zephyr_reference",
                 "fact_type": "reference",
@@ -1854,7 +1860,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2258,
+                "summary_node_id": 3097,
                 "level": 1,
                 "fact_id": "atlas_date",
                 "fact_type": "date",
@@ -1863,7 +1869,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2258,
+                "summary_node_id": 3097,
                 "level": 1,
                 "fact_id": "boreal_duration",
                 "fact_type": "duration",
@@ -1872,7 +1878,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2258,
+                "summary_node_id": 3097,
                 "level": 1,
                 "fact_id": "delta_percentage",
                 "fact_type": "percentage",
@@ -1881,7 +1887,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2258,
+                "summary_node_id": 3097,
                 "level": 1,
                 "fact_id": "ocr_noise",
                 "fact_type": "date",
@@ -1890,7 +1896,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2265,
+                "summary_node_id": 3104,
                 "level": 1,
                 "fact_id": "cygnus_amount",
                 "fact_type": "amount",
@@ -1899,7 +1905,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2265,
+                "summary_node_id": 3104,
                 "level": 1,
                 "fact_id": "fenix_obligation",
                 "fact_type": "obligation",
@@ -1908,7 +1914,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2270,
+                "summary_node_id": 3109,
                 "level": 2,
                 "fact_id": "cygnus_amount",
                 "fact_type": "amount",
@@ -1917,7 +1923,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2270,
+                "summary_node_id": 3109,
                 "level": 2,
                 "fact_id": "fenix_obligation",
                 "fact_type": "obligation",
@@ -1926,7 +1932,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2273,
+                "summary_node_id": 3112,
                 "level": 2,
                 "fact_id": "atlas_date",
                 "fact_type": "date",
@@ -1935,7 +1941,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2273,
+                "summary_node_id": 3112,
                 "level": 2,
                 "fact_id": "boreal_duration",
                 "fact_type": "duration",
@@ -1944,7 +1950,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2273,
+                "summary_node_id": 3112,
                 "level": 2,
                 "fact_id": "delta_percentage",
                 "fact_type": "percentage",
@@ -1953,7 +1959,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2273,
+                "summary_node_id": 3112,
                 "level": 2,
                 "fact_id": "ocr_noise",
                 "fact_type": "date",
@@ -1962,7 +1968,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2275,
+                "summary_node_id": 3114,
                 "level": 2,
                 "fact_id": "zephyr_reference",
                 "fact_type": "reference",
@@ -1971,7 +1977,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2276,
+                "summary_node_id": 3115,
                 "level": 3,
                 "fact_id": "cygnus_amount",
                 "fact_type": "amount",
@@ -1980,7 +1986,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2276,
+                "summary_node_id": 3115,
                 "level": 3,
                 "fact_id": "fenix_obligation",
                 "fact_type": "obligation",
@@ -1989,7 +1995,16 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2277,
+                "summary_node_id": 3117,
+                "level": 3,
+                "fact_id": "zephyr_reference",
+                "fact_type": "reference",
+                "expected_value": "REF-ZEPHYR-904",
+                "preserved": true
+              },
+              {
+                "dataset": "medium",
+                "summary_node_id": 3118,
                 "level": 3,
                 "fact_id": "atlas_date",
                 "fact_type": "date",
@@ -1998,7 +2013,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2277,
+                "summary_node_id": 3118,
                 "level": 3,
                 "fact_id": "boreal_duration",
                 "fact_type": "duration",
@@ -2007,7 +2022,7 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2277,
+                "summary_node_id": 3118,
                 "level": 3,
                 "fact_id": "delta_percentage",
                 "fact_type": "percentage",
@@ -2016,20 +2031,11 @@
               },
               {
                 "dataset": "medium",
-                "summary_node_id": 2277,
+                "summary_node_id": 3118,
                 "level": 3,
                 "fact_id": "ocr_noise",
                 "fact_type": "date",
                 "expected_value": "15 aout 2031",
-                "preserved": true
-              },
-              {
-                "dataset": "medium",
-                "summary_node_id": 2279,
-                "level": 3,
-                "fact_id": "zephyr_reference",
-                "fact_type": "reference",
-                "expected_value": "REF-ZEPHYR-904",
                 "preserved": true
               }
             ],
@@ -2128,7 +2134,8 @@
                   178
                 ],
                 "selected_levels": [
-                  0
+                  0,
+                  1
                 ],
                 "leaf_coverage": 1.0,
                 "context_included_chunk_indexes": [
@@ -2139,7 +2146,8 @@
                   "subintent_1": true
                 },
                 "selected_nodes_per_level": {
-                  "0": 5
+                  "0": 4,
+                  "1": 1
                 }
               },
               "success": true
@@ -2219,7 +2227,6 @@
                 ],
                 "selected_levels": [
                   0,
-                  2,
                   3
                 ],
                 "leaf_coverage": 1.0,
@@ -2232,9 +2239,8 @@
                   "subintent_1": true
                 },
                 "selected_nodes_per_level": {
-                  "0": 2,
-                  "3": 1,
-                  "2": 2
+                  "0": 4,
+                  "3": 1
                 }
               },
               "success": true
@@ -2376,7 +2382,7 @@
             "checks": [
               {
                 "dataset": "large",
-                "summary_node_id": 2460,
+                "summary_node_id": 3299,
                 "level": 1,
                 "fact_id": "atlas_date",
                 "fact_type": "date",
@@ -2385,7 +2391,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2460,
+                "summary_node_id": 3299,
                 "level": 1,
                 "fact_id": "boreal_duration",
                 "fact_type": "duration",
@@ -2394,7 +2400,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2460,
+                "summary_node_id": 3299,
                 "level": 1,
                 "fact_id": "delta_percentage",
                 "fact_type": "percentage",
@@ -2403,7 +2409,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2461,
+                "summary_node_id": 3300,
                 "level": 1,
                 "fact_id": "zephyr_reference",
                 "fact_type": "reference",
@@ -2412,7 +2418,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2462,
+                "summary_node_id": 3301,
                 "level": 1,
                 "fact_id": "cygnus_amount",
                 "fact_type": "amount",
@@ -2421,7 +2427,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2462,
+                "summary_node_id": 3301,
                 "level": 1,
                 "fact_id": "fenix_obligation",
                 "fact_type": "obligation",
@@ -2430,7 +2436,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2463,
+                "summary_node_id": 3302,
                 "level": 1,
                 "fact_id": "ocr_noise",
                 "fact_type": "date",
@@ -2439,7 +2445,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2464,
+                "summary_node_id": 3303,
                 "level": 2,
                 "fact_id": "cygnus_amount",
                 "fact_type": "amount",
@@ -2448,7 +2454,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2464,
+                "summary_node_id": 3303,
                 "level": 2,
                 "fact_id": "zephyr_reference",
                 "fact_type": "reference",
@@ -2457,7 +2463,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2464,
+                "summary_node_id": 3303,
                 "level": 2,
                 "fact_id": "fenix_obligation",
                 "fact_type": "obligation",
@@ -2466,7 +2472,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2465,
+                "summary_node_id": 3304,
                 "level": 2,
                 "fact_id": "atlas_date",
                 "fact_type": "date",
@@ -2475,7 +2481,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2465,
+                "summary_node_id": 3304,
                 "level": 2,
                 "fact_id": "boreal_duration",
                 "fact_type": "duration",
@@ -2484,7 +2490,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2465,
+                "summary_node_id": 3304,
                 "level": 2,
                 "fact_id": "delta_percentage",
                 "fact_type": "percentage",
@@ -2493,7 +2499,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2465,
+                "summary_node_id": 3304,
                 "level": 2,
                 "fact_id": "ocr_noise",
                 "fact_type": "date",
@@ -2502,7 +2508,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2466,
+                "summary_node_id": 3305,
                 "level": 3,
                 "fact_id": "atlas_date",
                 "fact_type": "date",
@@ -2511,7 +2517,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2466,
+                "summary_node_id": 3305,
                 "level": 3,
                 "fact_id": "boreal_duration",
                 "fact_type": "duration",
@@ -2520,7 +2526,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2466,
+                "summary_node_id": 3305,
                 "level": 3,
                 "fact_id": "cygnus_amount",
                 "fact_type": "amount",
@@ -2529,7 +2535,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2466,
+                "summary_node_id": 3305,
                 "level": 3,
                 "fact_id": "delta_percentage",
                 "fact_type": "percentage",
@@ -2538,7 +2544,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2466,
+                "summary_node_id": 3305,
                 "level": 3,
                 "fact_id": "zephyr_reference",
                 "fact_type": "reference",
@@ -2547,7 +2553,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2466,
+                "summary_node_id": 3305,
                 "level": 3,
                 "fact_id": "fenix_obligation",
                 "fact_type": "obligation",
@@ -2556,7 +2562,7 @@
               },
               {
                 "dataset": "large",
-                "summary_node_id": 2466,
+                "summary_node_id": 3305,
                 "level": 3,
                 "fact_id": "ocr_noise",
                 "fact_type": "date",
@@ -2582,7 +2588,7 @@
         "avg_recall@3": null,
         "avg_recall@5": null,
         "avg_recall@k": 0.9259,
-        "avg_mrr": 0.9444
+        "avg_mrr": 0.9815
       }
     },
     "prompt_engineering": {
@@ -2740,7 +2746,7 @@
             },
             "grounding": "answer_only_from_full_or_bounded_document_context",
             "fallback_answer": "Information not found in the provided document.",
-            "response_time_ms": 2.15,
+            "response_time_ms": 1.47,
             "limits": {
               "max_question_chars": 1000,
               "max_context_chars": 0,
@@ -2786,5 +2792,5 @@
       "token_cost_monitoring": "JUSTIFIEE PAR LES TESTS"
     }
   },
-  "elapsed_ms": 25757.89
+  "elapsed_ms": 28189.2
 }

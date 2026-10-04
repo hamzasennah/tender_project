@@ -29,6 +29,10 @@ DEFAULT_RAPTOR_MAX_TOP_K = 20
 DEFAULT_RAPTOR_MAX_QUESTION_CHARS = 1000
 DEFAULT_RAPTOR_CHILD_EXPANSION_LIMIT = 2
 DEFAULT_RAPTOR_FACTUAL_LEAF_CANDIDATES = 8
+DEFAULT_RAPTOR_RETRIEVAL_STRATEGY = "top_down"
+DEFAULT_RAPTOR_TOP_DOWN_BEAM_WIDTH = 3
+DEFAULT_RAPTOR_TOP_DOWN_CHILDREN_PER_NODE = 4
+DEFAULT_RAPTOR_TOP_DOWN_MAX_DEPTH = 4
 MIN_DIVERSITY_SCORE = 0.05
 DIVERSITY_RELATIVE_SCORE_FLOOR = 0.75
 DIVERSITY_ABSOLUTE_SCORE_MARGIN = 0.25
@@ -139,6 +143,41 @@ def get_raptor_factual_leaf_candidates():
     return _get_positive_int_setting(
         "RAPTOR_FACTUAL_LEAF_CANDIDATES",
         DEFAULT_RAPTOR_FACTUAL_LEAF_CANDIDATES,
+    )
+
+
+def get_raptor_retrieval_strategy():
+    value = str(
+        getattr(
+            settings,
+            "RAPTOR_RETRIEVAL_STRATEGY",
+            DEFAULT_RAPTOR_RETRIEVAL_STRATEGY,
+        )
+        or ""
+    ).strip().lower()
+    if value in {"flattened", "top_down"}:
+        return value
+    return DEFAULT_RAPTOR_RETRIEVAL_STRATEGY
+
+
+def get_raptor_top_down_beam_width():
+    return _get_positive_int_setting(
+        "RAPTOR_TOP_DOWN_BEAM_WIDTH",
+        DEFAULT_RAPTOR_TOP_DOWN_BEAM_WIDTH,
+    )
+
+
+def get_raptor_top_down_children_per_node():
+    return _get_positive_int_setting(
+        "RAPTOR_TOP_DOWN_CHILDREN_PER_NODE",
+        DEFAULT_RAPTOR_TOP_DOWN_CHILDREN_PER_NODE,
+    )
+
+
+def get_raptor_top_down_max_depth():
+    return _get_positive_int_setting(
+        "RAPTOR_TOP_DOWN_MAX_DEPTH",
+        DEFAULT_RAPTOR_TOP_DOWN_MAX_DEPTH,
     )
 
 
@@ -523,6 +562,14 @@ def _merge_level_candidates(existing_candidates, additional_candidates):
     return merged
 
 
+def _merge_candidate_into_levels(candidates_by_level, candidate):
+    level_candidates = candidates_by_level.setdefault(candidate.level, [])
+    candidates_by_level[candidate.level] = _merge_level_candidates(
+        level_candidates,
+        [candidate],
+    )
+
+
 def _selection_score(result):
     return (
         result.retrieval_score
@@ -651,6 +698,222 @@ def _child_candidates_for_parent(
     return candidates
 
 
+def _root_node_ids(index, levels):
+    try:
+        parented_child_ids = list(
+            RaptorNodeChild.objects.filter(parent__index=index)
+            .values_list("child_id", flat=True)
+            .distinct()
+        )
+        roots = list(
+            RaptorNode.objects.filter(index=index, document=index.document)
+            .exclude(id__in=parented_child_ids)
+            .order_by("-level", "node_index", "id")
+            .values_list("id", flat=True)
+        )
+    except DatabaseError as exc:
+        raise RaptorError(
+            "raptor_retrieval_failed",
+            "RAPTOR retrieval could not be completed safely.",
+            exc.__class__.__name__,
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ) from exc
+
+    if roots:
+        return roots
+
+    top_level = max(levels)
+    try:
+        return list(
+            RaptorNode.objects.filter(
+                index=index,
+                document=index.document,
+                level=top_level,
+            )
+            .order_by("node_index", "id")
+            .values_list("id", flat=True)
+        )
+    except DatabaseError as exc:
+        raise RaptorError(
+            "raptor_retrieval_failed",
+            "RAPTOR retrieval could not be completed safely.",
+            exc.__class__.__name__,
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ) from exc
+
+
+def _score_node_ids(
+    index,
+    node_ids,
+    query_vector,
+    provider,
+    query_intents,
+    query_tokens,
+    *,
+    selection_reason,
+):
+    if not node_ids:
+        return []
+
+    leaf_queryset = (
+        RaptorNode.objects.filter(
+            index=index,
+            document=index.document,
+            id__in=node_ids,
+            level=0,
+            source_chunk__isnull=False,
+            source_chunk__embedding__status=ChunkEmbedding.Status.COMPLETED,
+            source_chunk__embedding__provider=provider.provider_name,
+            source_chunk__embedding__model=provider.model,
+            source_chunk__embedding__dimension=provider.dimension,
+            source_chunk__embedding__embedding_vector__isnull=False,
+        )
+        .select_related("source_chunk", "source_chunk__embedding")
+        .annotate(
+            cosine_distance=CosineDistance(
+                "source_chunk__embedding__embedding_vector",
+                query_vector,
+            )
+        )
+    )
+    summary_queryset = (
+        RaptorNode.objects.filter(
+            index=index,
+            document=index.document,
+            id__in=node_ids,
+            level__gt=0,
+            embedding_vector__isnull=False,
+        )
+        .select_related("source_chunk")
+        .annotate(cosine_distance=CosineDistance("embedding_vector", query_vector))
+    )
+
+    try:
+        nodes = list(leaf_queryset) + list(summary_queryset)
+    except DatabaseError as exc:
+        raise RaptorError(
+            "raptor_retrieval_failed",
+            "RAPTOR retrieval could not be completed safely.",
+            exc.__class__.__name__,
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ) from exc
+
+    candidates = []
+    for node in nodes:
+        result = _retrieved_node(node)
+        reason = selection_reason
+        if node.level == 0:
+            factual_score, _signals = _factual_leaf_score(
+                query_intents,
+                query_tokens,
+                node.source_chunk.text,
+            )
+            if factual_score > 0:
+                result = replace(
+                    result,
+                    retrieval_score=result.similarity_score + factual_score,
+                )
+                reason = f"{selection_reason}_factual_leaf"
+        candidates.append(replace(result, selection_reason=reason))
+
+    candidates.sort(key=_result_sort_key)
+    return candidates
+
+
+def _child_ids_by_parent(parent_ids):
+    if not parent_ids:
+        return {}
+    try:
+        links = list(
+            RaptorNodeChild.objects.filter(parent_id__in=parent_ids)
+            .order_by("parent_id", "child_rank", "child_id")
+        )
+    except DatabaseError as exc:
+        raise RaptorError(
+            "raptor_retrieval_failed",
+            "RAPTOR retrieval could not be completed safely.",
+            exc.__class__.__name__,
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ) from exc
+
+    child_ids = {}
+    for link in links:
+        child_ids.setdefault(link.parent_id, []).append(link.child_id)
+    return child_ids
+
+
+def _retrieve_top_down_candidates(index, levels, question, query_vector, provider):
+    query_intents, query_tokens = _query_value_intents(question)
+    beam_width = get_raptor_top_down_beam_width()
+    children_per_node = get_raptor_top_down_children_per_node()
+    max_depth = get_raptor_top_down_max_depth()
+    root_ids = _root_node_ids(index, levels)
+    root_candidates = _score_node_ids(
+        index,
+        root_ids,
+        query_vector,
+        provider,
+        query_intents,
+        query_tokens,
+        selection_reason="top_down_root",
+    )
+    candidates_by_level = {}
+    selected_ids = set()
+    nodes_examined = len(root_candidates)
+    depth_reached = 0
+
+    frontier = root_candidates[:beam_width]
+    for candidate in frontier:
+        selected_ids.add(candidate.node_id)
+        _merge_candidate_into_levels(candidates_by_level, candidate)
+
+    for depth in range(1, max_depth + 1):
+        parent_ids = [
+            candidate.node_id
+            for candidate in frontier
+            if candidate.node_type == "summary"
+        ]
+        if not parent_ids:
+            break
+
+        children_by_parent = _child_ids_by_parent(parent_ids)
+        next_frontier = []
+        for parent in frontier:
+            child_ids = children_by_parent.get(parent.node_id, [])
+            child_candidates = _score_node_ids(
+                index,
+                child_ids,
+                query_vector,
+                provider,
+                query_intents,
+                query_tokens,
+                selection_reason="top_down_child",
+            )
+            nodes_examined += len(child_candidates)
+            for child in child_candidates[:children_per_node]:
+                child = replace(child, expanded_from_parent_id=parent.node_id)
+                if child.node_id not in selected_ids:
+                    selected_ids.add(child.node_id)
+                    _merge_candidate_into_levels(candidates_by_level, child)
+                next_frontier.append(child)
+
+        if not next_frontier:
+            break
+        next_frontier.sort(key=_result_sort_key)
+        frontier = next_frontier[:beam_width]
+        depth_reached = depth
+
+    metadata = {
+        "root_count": len(root_ids),
+        "nodes_examined": nodes_examined,
+        "depth_reached": depth_reached,
+        "beam_width": beam_width,
+        "children_per_node": children_per_node,
+        "max_depth": max_depth,
+    }
+    return candidates_by_level, metadata
+
+
 def _expand_selected_children(
     index,
     selected,
@@ -728,7 +991,16 @@ def _include_factual_leaf_candidates(selected, selected_ids, all_candidates, lim
         selected_ids.add(candidate.node_id)
 
 
-def _finalize_selection(index, candidates_by_level, limit, query_vector, provider, question):
+def _finalize_selection(
+    index,
+    candidates_by_level,
+    limit,
+    query_vector,
+    provider,
+    question,
+    *,
+    expand_children=True,
+):
     selected, selected_ids, all_candidates = _select_diverse_candidates(
         candidates_by_level,
         limit,
@@ -739,15 +1011,16 @@ def _finalize_selection(index, candidates_by_level, limit, query_vector, provide
         all_candidates,
         limit,
     )
-    _expand_selected_children(
-        index,
-        selected,
-        selected_ids,
-        limit,
-        query_vector,
-        provider,
-        question,
-    )
+    if expand_children:
+        _expand_selected_children(
+            index,
+            selected,
+            selected_ids,
+            limit,
+            query_vector,
+            provider,
+            question,
+        )
 
     for candidate in all_candidates:
         if len(selected) >= limit:
@@ -772,10 +1045,22 @@ def _selected_nodes_per_level(selected):
 def _retrieve_single_intent(document, index, question, limit, provider, levels):
     candidate_limit = _candidate_limit_per_level(limit)
     query_vector = _query_embedding(provider, question)
-    candidates_by_level = {
-        level: _level_candidates(index, level, query_vector, provider, candidate_limit)
-        for level in levels
-    }
+    retrieval_strategy = get_raptor_retrieval_strategy()
+    top_down_metadata = None
+    if retrieval_strategy == "top_down":
+        candidates_by_level, top_down_metadata = _retrieve_top_down_candidates(
+            index,
+            levels,
+            question,
+            query_vector,
+            provider,
+        )
+    else:
+        candidates_by_level = {
+            level: _level_candidates(index, level, query_vector, provider, candidate_limit)
+            for level in levels
+        }
+
     if 0 in candidates_by_level:
         factual_candidates = _factual_leaf_candidates(
             index,
@@ -787,6 +1072,16 @@ def _retrieve_single_intent(document, index, question, limit, provider, levels):
             candidates_by_level[0],
             factual_candidates,
         )
+    else:
+        factual_candidates = _factual_leaf_candidates(
+            index,
+            question,
+            query_vector,
+            provider,
+        )
+        if factual_candidates:
+            candidates_by_level[0] = factual_candidates
+
     selected = _finalize_selection(
         index,
         candidates_by_level,
@@ -794,6 +1089,7 @@ def _retrieve_single_intent(document, index, question, limit, provider, levels):
         query_vector,
         provider,
         question,
+        expand_children=(retrieval_strategy != "top_down"),
     )
     selected_counts = _selected_nodes_per_level(selected)
 
@@ -806,9 +1102,18 @@ def _retrieve_single_intent(document, index, question, limit, provider, levels):
         "result_count": len(selected),
         "results": selected,
         "retrieval_metadata": {
-            "retrieval_strategy": "hierarchical_vector_retrieval",
+            "retrieval_strategy": (
+                "hierarchical_top_down_vector_retrieval"
+                if retrieval_strategy == "top_down"
+                else "hierarchical_vector_retrieval"
+            ),
             "metric": "cosine",
-            "ranking": "per_level_pgvector_then_hierarchical_diversity",
+            "ranking": (
+                "top_down_beam_then_hierarchical_diversity"
+                if retrieval_strategy == "top_down"
+                else "per_level_pgvector_then_hierarchical_diversity"
+            ),
+            "base_retrieval_strategy": retrieval_strategy,
             "levels_available": levels,
             "levels_searched": [
                 level
@@ -823,6 +1128,7 @@ def _retrieve_single_intent(document, index, question, limit, provider, levels):
             "candidate_limit_per_level": candidate_limit,
             "child_expansion_limit": get_raptor_child_expansion_limit(),
             "factual_leaf_candidates": get_raptor_factual_leaf_candidates(),
+            "top_down": top_down_metadata,
             "provider": provider.provider_name,
             "model": provider.model,
             "dimension": provider.dimension,
@@ -971,12 +1277,25 @@ def _subintent_retrieval_metadata(intent_plan, subintent_payloads):
                 "selected_nodes_per_level",
                 {},
             ),
+            "top_down": payload.get("retrieval_metadata", {}).get("top_down"),
         }
         for index, (subintent, payload) in enumerate(
             zip(intent_plan.subintents, subintent_payloads),
             start=1,
         )
     ]
+
+
+def _sum_top_down_nodes_examined(subintent_payloads):
+    total = 0
+    found = False
+    for payload in subintent_payloads:
+        metadata = payload.get("retrieval_metadata", {}).get("top_down")
+        if not metadata:
+            continue
+        found = True
+        total += metadata.get("nodes_examined", 0)
+    return total if found else None
 
 
 def _retrieve_multi_intent(document, index, question, limit, provider, levels, intent_plan):
@@ -997,6 +1316,8 @@ def _retrieve_multi_intent(document, index, question, limit, provider, levels, i
         len(intent_plan.subintents),
         limit,
     )
+    retrieval_strategy = get_raptor_retrieval_strategy()
+    top_down_nodes_examined = _sum_top_down_nodes_examined(subintent_payloads)
 
     return {
         "document_id": document.id,
@@ -1007,9 +1328,14 @@ def _retrieve_multi_intent(document, index, question, limit, provider, levels, i
         "result_count": len(selected),
         "results": selected,
         "retrieval_metadata": {
-            "retrieval_strategy": "hierarchical_multi_intent_vector_retrieval",
+            "retrieval_strategy": (
+                "hierarchical_multi_intent_top_down_vector_retrieval"
+                if retrieval_strategy == "top_down"
+                else "hierarchical_multi_intent_vector_retrieval"
+            ),
             "metric": "cosine",
             "ranking": "best_relevant_node_per_subintent_then_global_score",
+            "base_retrieval_strategy": retrieval_strategy,
             "levels_available": levels,
             "levels_searched": _union_metadata_levels(
                 subintent_payloads,
@@ -1020,6 +1346,11 @@ def _retrieve_multi_intent(document, index, question, limit, provider, levels, i
             "candidate_limit_per_level": _candidate_limit_per_level(limit),
             "child_expansion_limit": get_raptor_child_expansion_limit(),
             "factual_leaf_candidates": get_raptor_factual_leaf_candidates(),
+            "top_down": (
+                {"nodes_examined": top_down_nodes_examined}
+                if top_down_nodes_examined is not None
+                else None
+            ),
             "provider": provider.provider_name,
             "model": provider.model,
             "dimension": provider.dimension,
@@ -1103,6 +1434,10 @@ def raptor_retrieval_limits_metadata():
         "max_question_chars": get_raptor_max_question_chars(),
         "child_expansion_limit": get_raptor_child_expansion_limit(),
         "factual_leaf_candidates": get_raptor_factual_leaf_candidates(),
+        "retrieval_strategy": get_raptor_retrieval_strategy(),
+        "top_down_beam_width": get_raptor_top_down_beam_width(),
+        "top_down_children_per_node": get_raptor_top_down_children_per_node(),
+        "top_down_max_depth": get_raptor_top_down_max_depth(),
         "multi_intent_enabled": get_raptor_multi_intent_enabled(),
         "max_subintents": get_raptor_max_subintents(),
     }
