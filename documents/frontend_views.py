@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -41,6 +40,7 @@ def _document_summary(document):
     raptor_index = _safe_related(document, "raptor_index")
     chunk_count = TextChunk.objects.filter(document=document).count()
     embedding_count = ChunkEmbedding.objects.filter(chunk__document=document).count()
+    business_status = _business_status(document, extraction, embedding_count)
 
     return {
         "document": document,
@@ -50,8 +50,23 @@ def _document_summary(document):
         "character_count": extraction.character_count if extraction else 0,
         "chunk_count": chunk_count,
         "embedding_count": embedding_count,
+        "business_status": business_status,
+        "status_label": business_status["label"],
+        "status_tone": business_status["tone"],
+        "is_ready": business_status["key"] == "ready",
+        "is_failed": business_status["key"] == "failed",
         "pipeline_status": _pipeline_status(extraction, chunk_count, embedding_count, raptor_index),
     }
+
+
+def _business_status(document, extraction, embedding_count):
+    if document.status == Document.Status.FAILED:
+        return {"key": "failed", "label": "Failed", "tone": "danger"}
+    if extraction and extraction.status == "failed":
+        return {"key": "failed", "label": "Failed", "tone": "danger"}
+    if embedding_count > 0:
+        return {"key": "ready", "label": "Ready", "tone": "success"}
+    return {"key": "preparing", "label": "Preparing", "tone": "pending"}
 
 
 def _pipeline_status(extraction, chunk_count, embedding_count, raptor_index):
@@ -79,24 +94,16 @@ def _document_queryset(user):
 @login_required
 def dashboard(request):
     documents = _document_queryset(request.user)
-    status_counts = {
-        item["status"]: item["count"]
-        for item in documents.values("status").annotate(count=Count("id"))
-    }
-    recent_documents = [_document_summary(document) for document in documents[:5]]
+    document_summaries = [_document_summary(document) for document in documents[:8]]
 
     return render(
         request,
         "dashboard/index.html",
         {
-            "active_nav": "dashboard",
-            "page_title": "Dashboard",
+            "active_nav": "documents",
+            "page_title": "Your documents",
             "greeting": _greeting(),
-            "document_count": documents.count(),
-            "completed_count": status_counts.get(Document.Status.COMPLETED, 0),
-            "processing_count": status_counts.get(Document.Status.PROCESSING, 0),
-            "failed_count": status_counts.get(Document.Status.FAILED, 0),
-            "recent_documents": recent_documents,
+            "documents": document_summaries,
             "max_upload_size_mb": _max_upload_size_mb(),
         },
     )
@@ -188,5 +195,7 @@ def document_workspace(request, document_id):
             "chunks_ready": chunks_ready,
             "embeddings_ready": embeddings_ready,
             "raptor_ready": raptor_ready,
+            "business_status": summary["business_status"],
+            "can_ask": summary["is_ready"],
         },
     )

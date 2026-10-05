@@ -6,6 +6,36 @@
         return `${(bytes / Math.pow(1024, index)).toFixed(index ? 1 : 0)} ${units[index]}`;
     }
 
+    function friendlyProcessingError(error) {
+        const message = String(error?.message || "").toLowerCase();
+        if (message.includes("rate") || message.includes("timeout") || message.includes("provider") || message.includes("429") || message.includes("503")) {
+            return "Temporary processing issue. We could not finish preparing this document right now. Please try again in a moment.";
+        }
+        return "We could not finish preparing this document. Please try again in a moment.";
+    }
+
+    async function prepareDocument(documentId, state) {
+        const steps = [
+            { label: "Reading the PDF", url: `/api/documents/${documentId}/extraction/` },
+            { label: "Organizing document passages", url: `/api/documents/${documentId}/chunks/` },
+            { label: "Preparing document search", url: `/api/documents/${documentId}/embeddings/` },
+            { label: "Finalizing research view", url: `/api/documents/${documentId}/raptor/`, optional: true },
+        ];
+
+        for (let index = 0; index < steps.length; index += 1) {
+            const step = steps[index];
+            state.title.textContent = "Preparing your document";
+            state.message.textContent = step.label;
+            state.progress.value = index;
+            try {
+                await TenderApp.request(step.url, { method: "POST", timeout: 180000 });
+            } catch (error) {
+                if (!step.optional) throw error;
+            }
+            state.progress.value = index + 1;
+        }
+    }
+
     function initUpload() {
         const form = document.querySelector("[data-upload-form]");
         if (!form) return;
@@ -14,6 +44,10 @@
         const dropzone = form.querySelector("[data-dropzone]");
         const selection = form.querySelector("[data-upload-selection]");
         const submit = form.querySelector("[data-upload-submit]");
+        const preparation = form.querySelector("[data-preparation-state]");
+        const prepTitle = form.querySelector("[data-preparation-title]");
+        const prepMessage = form.querySelector("[data-preparation-message]");
+        const prepProgress = form.querySelector("[data-preparation-progress]");
 
         const syncSelection = () => {
             const file = input.files?.[0];
@@ -53,19 +87,30 @@
                 return;
             }
             submit.disabled = true;
-            submit.textContent = "Importing document...";
+            submit.textContent = "Uploading...";
+            if (preparation) preparation.hidden = false;
             try {
                 const data = await TenderApp.request(form.action, {
                     method: "POST",
                     body: new FormData(form),
                 });
-                TenderApp.showToast("Document imported.");
+                if (form.dataset.prepareAfterUpload === "true") {
+                    await prepareDocument(data.id, {
+                        title: prepTitle,
+                        message: prepMessage,
+                        progress: prepProgress,
+                    });
+                }
+                TenderApp.showToast("Document ready.");
                 window.location.href = `/documents/${data.id}/`;
             } catch (error) {
-                TenderApp.showToast(error.message || "Upload failed.", "error");
-            } finally {
+                if (prepTitle && prepMessage) {
+                    prepTitle.textContent = "Temporary processing issue";
+                    prepMessage.textContent = friendlyProcessingError(error);
+                }
+                TenderApp.showToast(friendlyProcessingError(error), "error");
                 submit.disabled = false;
-                submit.textContent = "Import document";
+                submit.textContent = "Upload and prepare";
             }
         });
     }
@@ -100,7 +145,7 @@
                         button.closest("[data-document-row]")?.remove();
                     }
                 } catch (error) {
-                    TenderApp.showToast(error.message || "Delete failed.", "error");
+                    TenderApp.showToast("We could not delete this document.", "error");
                 } finally {
                     button.disabled = false;
                 }

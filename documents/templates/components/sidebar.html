@@ -1,42 +1,18 @@
-<aside class="sidebar" aria-label="Primary navigation">
-    <div class="brand-lockup" aria-label="Tender Intelligence">
-        <div class="brand-mark">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 4.5h14v15H5z"></path>
-                <path d="M8 8h8M8 12h8M8 16h5"></path>
-            </svg>
-        </div>
-        <div>
-            <div class="brand-name">Tender</div>
-            <div class="brand-subtitle">Intelligence</div>
-        </div>
-    </div>
+<header class="product-nav" aria-label="Primary navigation">
+    <a class="brand-lockup" href="{% url 'dashboard' %}" aria-label="Tender Intelligence home">
+        <span class="brand-mark">TI</span>
+        <span class="brand-name">Tender Intelligence</span>
+    </a>
 
     <nav class="nav-stack">
-        <a class="nav-link {% if active_nav == 'dashboard' %}is-active{% endif %}" href="{% url 'dashboard' %}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h7V4H4zm9 7h7V4h-7zM4 20h7v-5H4z"></path></svg>
-            <span>Dashboard</span>
-        </a>
-        <a class="nav-link {% if active_nav == 'documents' %}is-active{% endif %}" href="{% url 'web-document-list' %}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4v13H7z"></path><path d="M14 3.5v4h4M9.5 12h5M9.5 15.5h5"></path></svg>
-            <span>Documents</span>
-        </a>
+        <a class="nav-link {% if active_nav == 'documents' %}is-active{% endif %}" href="{% url 'dashboard' %}">Documents</a>
     </nav>
 
-    <div class="sidebar-footer">
-        <div class="user-chip">
-            <span class="avatar">{{ request.user.username|first|upper }}</span>
-            <span class="user-meta">
-                <span>{{ request.user.username }}</span>
-                <small>Workspace</small>
-            </span>
-        </div>
+    <div class="nav-account">
+        <span class="user-name">{{ request.user.username }}</span>
         <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
-            <button class="ghost-button full-width" type="submit">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6H6v12h4M14 8l4 4-4 4M8 12h10"></path></svg>
-                Sign out
-            </button>
+            <button class="text-button" type="submit">Sign out</button>
         </form>
     </div>
-</aside>
+</header>

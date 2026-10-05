@@ -10,12 +10,9 @@
 <body class="app-shell" data-page="{{ active_nav|default:'app' }}">
     <a class="skip-link" href="#main-content">Skip to content</a>
     {% include "components/sidebar.html" %}
-    <div class="app-main">
-        {% include "components/topbar.html" %}
-        <main id="main-content" class="content-frame" tabindex="-1">
-            {% block content %}{% endblock %}
-        </main>
-    </div>
+    <main id="main-content" class="content-frame" tabindex="-1">
+        {% block content %}{% endblock %}
+    </main>
     {% include "components/toast.html" %}
     {% include "components/modal.html" %}
     <script src="{% static 'js/app.js' %}"></script>

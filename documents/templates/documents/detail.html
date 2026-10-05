@@ -2,124 +2,127 @@
 {% load static %}
 
 {% block content %}
-<section class="document-hero"
+<section class="document-header"
     data-document-workspace
+    data-ask-url="{% url 'document-rag-ask' document.id %}"
+    data-search-url="{% url 'document-semantic-search' document.id %}"
     data-pe-url="{% url 'document-prompt-engineering-ask' document.id %}"
     data-rag-url="{% url 'document-rag-ask' document.id %}"
-    data-raptor-url="{% url 'document-raptor-ask' document.id %}">
+    data-raptor-url="{% url 'document-raptor-ask' document.id %}"
+    data-can-ask="{% if can_ask %}true{% else %}false{% endif %}">
     <div>
-        <div class="crumbs"><a href="{% url 'web-document-list' %}">Documents</a><span>/</span><span>{{ document.original_filename }}</span></div>
-        <h2>{{ document.original_filename }}</h2>
-        <div class="document-meta">
-            {% include "components/status_badge.html" with status=document.status label=document.status %}
-            {% if summary.page_count %}<span>{{ summary.page_count }} pages</span>{% endif %}
-            <span>{{ document.file_size|filesizeformat }}</span>
-            <span>{{ document.created_at|date:"M d, Y H:i" }}</span>
-        </div>
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="{% url 'dashboard' %}">Documents</a>
+            <span>/</span>
+            <span>{{ document.original_filename }}</span>
+        </nav>
+        <h1>{{ document.original_filename }}</h1>
+        <p class="metadata-line">
+            {% if summary.page_count %}{{ summary.page_count }} pages{% else %}PDF document{% endif %}
+            <span aria-hidden="true">/</span>
+            Uploaded {{ document.created_at|date:"M d, Y" }}
+            <span aria-hidden="true">/</span>
+            {% include "components/status_badge.html" with tone=business_status.tone label=business_status.label %}
+        </p>
     </div>
-    <div class="hero-actions">
-        <a class="button button-secondary" href="{% url 'document-download' document.id %}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10M8 10l4 4 4-4M5 20h14"></path></svg>
-            Download
-        </a>
-        <button class="button button-danger" type="button" data-delete-document data-delete-url="{% url 'document-detail' document.id %}" data-delete-redirect="{% url 'web-document-list' %}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M8 7l1-3h6l1 3M7 7l1 13h8l1-13"></path></svg>
-            Delete
-        </button>
+    <div class="document-actions">
+        <a class="button button-secondary" href="{% url 'document-download' document.id %}">Download</a>
+        <button class="text-button danger" type="button" data-delete-document data-delete-url="{% url 'document-detail' document.id %}" data-delete-redirect="{% url 'web-document-list' %}">Delete</button>
     </div>
 </section>
 
-<div class="tabs" role="tablist" aria-label="Document workspace">
-    <button class="tab-trigger is-active" type="button" data-tab-trigger="overview" role="tab" aria-selected="true">Overview</button>
-    <button class="tab-trigger" type="button" data-tab-trigger="analysis" role="tab" aria-selected="false">Analysis</button>
+<div class="document-tabs" role="tablist" aria-label="Document sections">
+    <button class="tab-trigger is-active" type="button" data-tab-trigger="ask" role="tab" aria-selected="true">Ask document</button>
+    <button class="tab-trigger" type="button" data-tab-trigger="overview" role="tab" aria-selected="false">Overview</button>
 </div>
 
-<section class="tab-panel is-active" data-tab-panel="overview">
-    <div class="workspace-grid">
-        <div class="panel pipeline-panel">
-            <div class="section-heading">
-                <div>
-                    <p class="eyebrow">Pipeline</p>
-                    <h2>Document readiness</h2>
-                </div>
-            </div>
-            <div class="pipeline-steps">
-                {% for step in pipeline %}
-                    <article class="pipeline-step state-{{ step.state }}">
-                        <div class="step-marker"></div>
-                        <div>
-                            <h3>{{ step.label }}</h3>
-                            <p>{{ step.description }}</p>
-                            <span>{{ step.status }}</span>
-                        </div>
-                        {% if step.action %}
-                            {% url step.endpoint_name document.id as action_url %}
-                            <button class="button button-secondary" type="button" data-pipeline-action data-action-url="{{ action_url }}">{{ step.action }}</button>
-                        {% endif %}
-                    </article>
-                {% endfor %}
-            </div>
-        </div>
+<section class="tab-panel is-active ask-view" data-tab-panel="ask">
+    <div class="ask-composition">
+        <section class="ask-column">
+            <p class="kicker">Ask this document</p>
+            <h2>Find deadlines, guarantees, eligibility requirements and obligations directly from the tender.</h2>
 
-        <aside class="panel readiness-panel">
-            <p class="eyebrow">Analysis readiness</p>
-            <div class="readiness-list">
-                <div class="readiness-item {% if extraction_ready %}ready{% endif %}">
-                    <strong>Prompt Engineering</strong>
-                    <span>Full-document reasoning{% if not extraction_ready %} - extract text first{% endif %}</span>
+            {% if not can_ask %}
+                <div class="notice-panel" data-preparing-notice>
+                    <strong>{% if summary.is_failed %}Document unavailable{% else %}Preparing your document{% endif %}</strong>
+                    <p>{% if summary.is_failed %}We could not finish preparing this document. Try importing it again or review the technical details below.{% else %}We are organizing the information required for grounded answers. This may take a moment.{% endif %}</p>
                 </div>
-                <div class="readiness-item {% if embeddings_ready %}ready{% endif %}">
-                    <strong>RAG</strong>
-                    <span>Hybrid retrieval + grounded generation{% if not embeddings_ready %} - chunks and embeddings required{% endif %}</span>
+            {% endif %}
+
+            <form class="question-form" data-analysis-form>
+                <label class="field">
+                    <span class="sr-only">Question</span>
+                    <textarea name="question" rows="3" placeholder="Ask anything about this tender..." required {% if not can_ask %}disabled{% endif %}></textarea>
+                </label>
+                <div class="question-actions">
+                    <button class="button button-primary" type="submit" data-analysis-submit {% if not can_ask %}disabled{% endif %}>Ask</button>
                 </div>
-                <div class="readiness-item {% if raptor_ready %}ready{% endif %}">
-                    <strong>RAPTOR</strong>
-                    <span>Hierarchical document reasoning{% if not raptor_ready %} - RAPTOR index required{% endif %}</span>
-                </div>
+            </form>
+
+            <div class="suggested-questions" aria-label="Suggested questions">
+                <button type="button" data-suggested-question="What is the submission deadline?">Submission deadline</button>
+                <button type="button" data-suggested-question="What financial guarantee is required?">Financial guarantee</button>
+                <button type="button" data-suggested-question="What are the eligibility requirements?">Eligibility</button>
+                <button type="button" data-suggested-question="Which documents must be included?">Required documents</button>
             </div>
-        </aside>
+        </section>
+
+        <section class="answer-column" data-answer-panel>
+            <div class="answer-placeholder">
+                <h2>Answer</h2>
+                <p>Ask a question to receive a clear answer with evidence from the PDF.</p>
+            </div>
+        </section>
     </div>
 </section>
 
-<section class="tab-panel" data-tab-panel="analysis">
-    <div class="analysis-layout">
-        <section class="panel ask-panel">
-            <p class="eyebrow">Ask this document</p>
-            <form data-analysis-form>
-                <label class="field">
-                    <span>Question</span>
-                    <textarea name="question" rows="4" placeholder="Ask a question about this tender..." required></textarea>
-                </label>
-                <div class="method-control" role="radiogroup" aria-label="Analysis method">
-                    <label>
-                        <input type="radio" name="method" value="pe" checked>
-                        <span><strong>Prompt Engineering</strong><small>Full-document reasoning</small></span>
-                    </label>
-                    <label>
-                        <input type="radio" name="method" value="rag">
-                        <span><strong>RAG</strong><small>Hybrid retrieval + grounded generation</small></span>
-                    </label>
-                    <label>
-                        <input type="radio" name="method" value="raptor">
-                        <span><strong>RAPTOR</strong><small>Hierarchical document reasoning</small></span>
-                    </label>
-                </div>
-                <label class="field compact-topk">
-                    <span>Top K for RAG/RAPTOR</span>
-                    <input type="number" name="top_k" min="1" max="20" value="5">
-                </label>
-                <button class="button button-primary full-width" type="submit" data-analysis-submit>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
-                    Analyze document
-                </button>
-            </form>
+<section class="tab-panel" data-tab-panel="overview">
+    <div class="overview-grid">
+        <section class="overview-section">
+            <h2>Document information</h2>
+            <dl class="metadata-list">
+                <div><dt>Status</dt><dd>{{ business_status.label }}</dd></div>
+                <div><dt>Uploaded</dt><dd>{{ document.created_at|date:"M d, Y H:i" }}</dd></div>
+                <div><dt>File size</dt><dd>{{ document.file_size|filesizeformat }}</dd></div>
+                <div><dt>Pages</dt><dd>{% if summary.page_count %}{{ summary.page_count }}{% else %}Not available yet{% endif %}</dd></div>
+            </dl>
         </section>
 
-        <section class="panel answer-panel" data-answer-panel>
-            <div class="empty-state compact">
-                <h3>No analysis yet</h3>
-                <p>Choose a method and ask a question. The answer, evidence and technical details will appear here.</p>
-            </div>
+        <section class="overview-section">
+            <h2>Preparation</h2>
+            <p class="muted-copy">
+                {% if business_status.key == "ready" %}
+                    This document is ready for grounded questions.
+                {% elif business_status.key == "failed" %}
+                    Preparation did not complete. The document can be retried from the library.
+                {% else %}
+                    Preparation is still in progress or has not been completed yet.
+                {% endif %}
+            </p>
+            <details class="technical-details">
+                <summary>Technical details</summary>
+                <dl class="metadata-list compact">
+                    <div><dt>Extraction</dt><dd>{% if summary.extraction %}{{ summary.extraction.status }}{% else %}not started{% endif %}</dd></div>
+                    <div><dt>Chunks</dt><dd>{{ summary.chunk_count }}</dd></div>
+                    <div><dt>Embeddings</dt><dd>{{ summary.embedding_count }}</dd></div>
+                    <div><dt>Research index</dt><dd>{% if summary.raptor_index %}{{ summary.raptor_index.status }}{% else %}not started{% endif %}</dd></div>
+                </dl>
+            </details>
+        </section>
+
+        <section class="overview-section research-panel">
+            <details>
+                <summary>Research comparison</summary>
+                <p class="muted-copy">For evaluation only. Compare the separate internal methods without changing the main document experience.</p>
+                <form data-compare-form class="compare-form">
+                    <label class="field">
+                        <span>Question</span>
+                        <input type="text" name="question" placeholder="Question for method comparison">
+                    </label>
+                    <button class="button button-secondary" type="submit">Compare methods</button>
+                </form>
+                <div class="compare-results" data-compare-results></div>
+            </details>
         </section>
     </div>
 </section>
