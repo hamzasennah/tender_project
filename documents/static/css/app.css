@@ -1,26 +1,26 @@
 :root {
-    --background: #f3f3ef;
-    --background-strong: #e5e6dd;
-    --surface: #fcfcf8;
-    --surface-subtle: #f2f4ef;
+    --background: #f5f4ef;
+    --background-strong: #e8e7df;
+    --surface: #fffefa;
+    --surface-subtle: #f1f0ea;
     --surface-ink: #221f1c;
     --text-primary: #211f1d;
     --text-secondary: #625d55;
     --text-tertiary: #8a8276;
     --border-subtle: #d9d9cf;
     --border-strong: #c4c5ba;
-    --accent: #8b2430;
-    --accent-muted: #f0e1de;
+    --accent: #8a2732;
+    --accent-muted: #f4e7e5;
     --danger: #a64238;
     --success: #2f6e4f;
     --pending: #9a6b2f;
     --radius-sm: 4px;
     --radius-md: 8px;
     --radius-lg: 8px;
-    --shadow-soft: 0 18px 45px rgba(36, 29, 22, 0.08);
+    --shadow-soft: 0 16px 36px rgba(36, 29, 22, 0.07);
     --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --serif: Georgia, "Times New Roman", serif;
-    --space-page: clamp(24px, 4vw, 64px);
+    --space-page: clamp(28px, 3.4vw, 72px);
 }
 
 * {
@@ -42,10 +42,7 @@ body {
     color: var(--text-primary);
     font-family: var(--font);
     letter-spacing: 0;
-    background:
-        linear-gradient(90deg, rgba(139, 36, 48, 0.035) 1px, transparent 1px),
-        linear-gradient(180deg, #f8f8f4 0%, var(--background) 42%, #e8ebe3 100%);
-    background-size: 76px 76px, auto;
+    background: var(--background);
 }
 
 a {
@@ -101,9 +98,9 @@ svg {
     grid-template-columns: minmax(230px, 1fr) auto minmax(230px, 1fr);
     align-items: center;
     gap: 24px;
-    padding: 22px var(--space-page);
+    padding: 16px var(--space-page);
     border-bottom: 1px solid var(--border-subtle);
-    background: rgba(244, 240, 232, 0.84);
+    background: rgba(245, 244, 239, 0.94);
     backdrop-filter: blur(16px);
 }
 
@@ -169,9 +166,9 @@ svg {
 }
 
 .content-frame {
-    width: min(1180px, calc(100% - (var(--space-page) * 2)));
+    width: min(1360px, calc(100% - (var(--space-page) * 2)));
     margin: 0 auto;
-    padding: 50px 0 72px;
+    padding: 34px 0 64px;
 }
 
 .kicker {
@@ -188,7 +185,7 @@ svg {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 32px;
     align-items: end;
-    padding-bottom: 42px;
+    padding-bottom: 24px;
 }
 
 .page-intro h1,
@@ -203,17 +200,17 @@ svg {
 }
 
 .page-intro h1 {
-    font-size: 78px;
-    line-height: 0.96;
+    font-size: 52px;
+    line-height: 1.04;
 }
 
 .page-intro p,
 .login-statement p {
     max-width: 680px;
-    margin: 18px 0 0;
+    margin: 12px 0 0;
     color: var(--text-secondary);
-    font-size: 18px;
-    line-height: 1.65;
+    font-size: 16px;
+    line-height: 1.55;
 }
 
 .button,
@@ -228,9 +225,9 @@ svg {
 }
 
 .button {
-    padding: 0 16px;
+    padding: 0 14px;
     font-size: 14px;
-    font-weight: 720;
+    font-weight: 680;
 }
 
 .button:hover,
@@ -241,6 +238,7 @@ svg {
 .button-primary {
     color: #fff;
     background: var(--accent);
+    box-shadow: 0 6px 14px rgba(138, 39, 50, 0.12);
 }
 
 .button-primary:hover {
@@ -300,7 +298,7 @@ svg {
 }
 
 .document-table-section {
-    padding-top: 8px;
+    padding-top: 12px;
 }
 
 .document-table {
@@ -309,10 +307,10 @@ svg {
 
 .doc-line {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 120px 120px auto;
-    gap: 22px;
+    grid-template-columns: minmax(0, 1fr) 120px 130px auto 34px;
+    gap: 18px;
     align-items: center;
-    min-height: 86px;
+    min-height: 74px;
     border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -340,15 +338,17 @@ a.doc-line:hover,
     font-size: 13px;
 }
 
-.row-arrow {
+.row-chevron {
+    display: inline-flex;
+    justify-content: flex-end;
     color: var(--text-tertiary);
-    font-size: 18px;
 }
 
 .row-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 14px;
+    gap: 10px;
 }
 
 .status-badge {
@@ -386,21 +386,33 @@ a.doc-line:hover,
     background: var(--danger);
 }
 
-.import-drawer {
+.import-panel {
     display: grid;
-    grid-template-columns: minmax(0, 0.85fr) minmax(360px, 1.15fr);
-    gap: 38px;
-    align-items: start;
-    margin-bottom: 46px;
-    padding: 28px 0;
-    border-top: 1px solid var(--border-subtle);
-    border-bottom: 1px solid var(--border-subtle);
+    max-width: 760px;
+    margin-bottom: 28px;
+    padding: 20px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: rgba(255, 254, 250, 0.76);
+    box-shadow: var(--shadow-soft);
 }
 
-.import-copy p {
-    max-width: 440px;
+.panel-title-row {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.panel-title-row h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.panel-title-row p {
+    margin: 6px 0 0;
     color: var(--text-secondary);
-    line-height: 1.65;
+    line-height: 1.45;
 }
 
 .upload-form.refined {
@@ -411,8 +423,8 @@ a.doc-line:hover,
 .dropzone {
     display: grid;
     gap: 8px;
-    min-height: 170px;
-    padding: 24px;
+    min-height: 132px;
+    padding: 20px;
     border: 1px dashed var(--border-strong);
     border-radius: var(--radius-md);
     background: rgba(255, 255, 255, 0.28);
@@ -459,6 +471,10 @@ a.doc-line:hover,
     gap: 8px;
 }
 
+.preparation-state progress[hidden] {
+    display: none;
+}
+
 progress {
     width: 100%;
     height: 6px;
@@ -481,7 +497,7 @@ progress::-webkit-progress-value {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 28px;
     align-items: start;
-    padding-bottom: 30px;
+    padding-bottom: 22px;
     border-bottom: 1px solid var(--border-strong);
 }
 
@@ -489,7 +505,7 @@ progress::-webkit-progress-value {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 18px;
+    margin-bottom: 12px;
     font-size: 13px;
 }
 
@@ -498,8 +514,8 @@ progress::-webkit-progress-value {
 }
 
 .document-header h1 {
-    font-size: 62px;
-    line-height: 1.02;
+    font-size: 42px;
+    line-height: 1.08;
 }
 
 .metadata-line {
@@ -520,7 +536,7 @@ progress::-webkit-progress-value {
 .document-tabs {
     display: flex;
     gap: 22px;
-    margin: 26px 0 34px;
+    margin: 20px 0 26px;
 }
 
 .tab-trigger {
@@ -548,8 +564,8 @@ progress::-webkit-progress-value {
 
 .ask-composition {
     display: grid;
-    grid-template-columns: minmax(340px, 0.9fr) minmax(0, 1.1fr);
-    gap: clamp(34px, 6vw, 86px);
+    grid-template-columns: minmax(320px, 0.78fr) minmax(0, 1.22fr);
+    gap: clamp(28px, 4vw, 56px);
     align-items: start;
 }
 
@@ -557,7 +573,7 @@ progress::-webkit-progress-value {
     max-width: 520px;
     margin: 0 0 24px;
     font-family: var(--serif);
-    font-size: 46px;
+    font-size: 34px;
     font-weight: 500;
     line-height: 1.05;
     overflow-wrap: anywhere;
@@ -638,8 +654,8 @@ progress::-webkit-progress-value {
 }
 
 .answer-column {
-    min-height: 460px;
-    padding: clamp(22px, 4vw, 42px);
+    min-height: 430px;
+    padding: clamp(20px, 3vw, 34px);
     border-left: 1px solid var(--border-subtle);
 }
 
@@ -651,7 +667,7 @@ progress::-webkit-progress-value {
 .answer-shell h2 {
     margin: 0 0 10px;
     font-family: var(--serif);
-    font-size: 34px;
+    font-size: 30px;
     font-weight: 500;
 }
 
@@ -667,8 +683,8 @@ progress::-webkit-progress-value {
 
 .answer-copy {
     white-space: pre-wrap;
-    font-size: 18px;
-    line-height: 1.75;
+    font-size: 17px;
+    line-height: 1.7;
 }
 
 .evidence-list {
@@ -681,20 +697,36 @@ progress::-webkit-progress-value {
     border-top: 1px solid var(--border-subtle);
 }
 
-.evidence-item strong {
-    display: block;
+.evidence-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: baseline;
     margin-bottom: 8px;
+}
+
+.evidence-meta strong {
     color: var(--text-secondary);
     font-size: 13px;
     font-weight: 760;
+}
+
+.evidence-meta span,
+.evidence-link {
+    color: var(--text-tertiary);
+    font-size: 13px;
 }
 
 .evidence-item blockquote {
     margin: 0;
     color: var(--text-primary);
     font-family: var(--serif);
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1.55;
+}
+
+.evidence-link {
+    margin-top: 10px;
 }
 
 .overview-grid {
@@ -884,7 +916,7 @@ progress::-webkit-progress-value {
 }
 
 .login-editorial {
-    min-height: 560px;
+    min-height: 480px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -893,8 +925,8 @@ progress::-webkit-progress-value {
 
 .login-statement h1 {
     max-width: 690px;
-    font-size: 82px;
-    line-height: 0.95;
+    font-size: 58px;
+    line-height: 1.02;
 }
 
 .login-card {
@@ -920,7 +952,7 @@ progress::-webkit-progress-value {
     .product-nav,
     .page-intro,
     .document-header,
-    .import-drawer,
+    .import-panel,
     .ask-composition,
     .overview-grid,
     .login-shell {
@@ -943,29 +975,35 @@ progress::-webkit-progress-value {
     }
 
     .page-intro h1 {
-        font-size: 58px;
+        font-size: 44px;
     }
 
     .document-header h1 {
-        font-size: 52px;
+        font-size: 38px;
     }
 
     .ask-column h2 {
-        font-size: 40px;
+        font-size: 32px;
     }
 
     .login-statement h1 {
-        font-size: 58px;
+        font-size: 46px;
     }
 
     .doc-line {
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) auto;
         gap: 10px;
         padding: 18px 0;
     }
 
     .row-actions {
         justify-content: flex-start;
+    }
+
+    .doc-line .status-badge,
+    .doc-line .doc-date,
+    .doc-line .row-actions {
+        grid-column: 1 / -1;
     }
 }
 

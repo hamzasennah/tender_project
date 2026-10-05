@@ -65,6 +65,21 @@ class FrontendViewTests(TestCase):
         )
         return document
 
+    def create_failed_document(self, owner=None, filename="failed.pdf"):
+        document = self.create_document(owner=owner, filename=filename)
+        document.status = Document.Status.FAILED
+        document.save(update_fields=["status"])
+        TextExtractionResult.objects.create(
+            document=document,
+            status=TextExtractionResult.Status.FAILED,
+            extracted_text="",
+            has_text=False,
+            page_count=0,
+            pages_processed=0,
+            character_count=0,
+        )
+        return document
+
     def login(self, user=None):
         self.client.force_login(user or self.user)
 
@@ -73,6 +88,8 @@ class FrontendViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Tender Intelligence")
+        self.assertContains(response, "Review tender documents with evidence.")
+        self.assertNotContains(response, "Ask better questions of complex tender PDFs.")
         self.assertContains(response, "Sign in")
         self.assertTemplateUsed(response, "registration/login.html")
 
@@ -122,9 +139,23 @@ class FrontendViewTests(TestCase):
         self.assertContains(response, "own.pdf")
         self.assertNotContains(response, "other.pdf")
         self.assertContains(response, reverse("document-list"))
+        self.assertContains(response, 'data-upload-panel hidden')
+        self.assertContains(response, 'data-open-upload')
         self.assertContains(response, 'data-prepare-after-upload="true"')
         self.assertContains(response, "Preparing your document")
+        self.assertNotContains(response, "-&gt;")
         self.assertTemplateUsed(response, "documents/list.html")
+
+    def test_document_library_failed_row_exposes_retry(self):
+        document = self.create_failed_document(filename="failed.pdf")
+        self.login()
+
+        response = self.client.get(reverse("web-document-list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "failed.pdf")
+        self.assertContains(response, 'data-retry-document')
+        self.assertContains(response, f'data-document-id="{document.id}"')
 
     def test_document_workspace_requires_owner(self):
         own_document = self.create_prepared_document(filename="own.pdf")
@@ -142,8 +173,9 @@ class FrontendViewTests(TestCase):
             reverse("document-rag-ask", args=[own_document.id]),
         )
         self.assertContains(own_response, "Ask this document")
-        self.assertContains(own_response, "evidence from the PDF")
+        self.assertContains(own_response, "evidence from the document")
         self.assertContains(own_response, "Ready")
+        self.assertContains(own_response, 'data-document-url')
         self.assertTemplateUsed(own_response, "documents/detail.html")
 
     def test_normal_document_ui_hides_technical_pipeline_actions(self):
@@ -158,6 +190,21 @@ class FrontendViewTests(TestCase):
         self.assertNotContains(response, "Build RAPTOR")
         self.assertNotContains(response, "Document readiness")
 
+    def test_failed_document_ui_uses_retry_without_jargon(self):
+        document = self.create_failed_document(filename="failed.pdf")
+        self.login()
+
+        response = self.client.get(reverse("web-document-detail", args=[document.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "We couldn't prepare this document.")
+        self.assertContains(response, "Try again in a moment.")
+        self.assertContains(response, 'data-retry-document')
+        self.assertNotContains(response, "provider")
+        self.assertNotContains(response, "Gemini")
+        self.assertNotContains(response, "429")
+        self.assertNotContains(response, "503")
+
     def test_ready_state_uses_business_language(self):
         document = self.create_prepared_document(filename="ready.pdf")
         self.login()
@@ -169,12 +216,20 @@ class FrontendViewTests(TestCase):
         self.assertContains(response, "This document is ready for grounded questions.")
         self.assertContains(response, "Research comparison")
 
-    def test_frontend_static_translates_provider_errors(self):
-        with open("documents/static/js/analysis.js", encoding="utf-8") as script:
-            contents = script.read()
+    def test_frontend_static_translates_technical_errors(self):
+        with open("documents/static/js/analysis.js", encoding="utf-8") as analysis_script:
+            analysis_contents = analysis_script.read()
+        with open("documents/static/js/documents.js", encoding="utf-8") as documents_script:
+            documents_contents = documents_script.read()
+        combined = analysis_contents + documents_contents
 
-        self.assertIn("Temporary processing issue", contents)
-        self.assertNotIn("Gemini 429", contents)
+        self.assertIn("We couldn't prepare this document.", documents_contents)
+        self.assertIn("Open in document", analysis_contents)
+        self.assertNotIn("Gemini", combined)
+        self.assertNotIn("HTTP 429", combined)
+        self.assertNotIn("HTTP 503", combined)
+        self.assertNotIn("provider", combined)
+        self.assertNotIn("showToast(friendlyProcessingError", documents_contents)
 
     def test_home_redirects_by_authentication_state(self):
         anonymous_response = self.client.get(reverse("home"))

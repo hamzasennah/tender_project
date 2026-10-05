@@ -6,31 +6,35 @@
     <div>
         <p class="kicker">Documents</p>
         <h1>Your tender library</h1>
-        <p>Upload PDF tenders, track preparation status and open each document when it is ready for questions.</p>
+        <p>Track tender PDFs, preparation status and document questions from one workspace.</p>
     </div>
-    <a class="button button-primary" href="#new-document">New document</a>
+    <button class="button button-primary" type="button" data-open-upload>New document</button>
 </section>
 
-<section id="new-document" class="import-drawer" aria-label="New document">
-    <div class="import-copy">
-        <h2>New document</h2>
-        <p>Drop a PDF and we will prepare it for document questions. This may take a moment for larger tenders.</p>
-    </div>
+<section id="new-document" class="import-panel" aria-label="New document" data-upload-panel hidden>
     <form class="upload-form refined" action="{% url 'document-list' %}" method="post" enctype="multipart/form-data" data-upload-form data-prepare-after-upload="true">
         {% csrf_token %}
+        <div class="panel-title-row">
+            <div>
+                <h2>New document</h2>
+                <p>Upload a tender PDF and prepare it for questions.</p>
+            </div>
+            <button class="text-button" type="button" data-close-upload>Close</button>
+        </div>
         <label class="dropzone" data-dropzone>
             <input type="file" name="file" accept="application/pdf" required data-file-input>
             <span class="dropzone-title">Choose a PDF tender</span>
             <span class="dropzone-subtitle">Drag and drop, or browse from your device</span>
-            <small>PDF / Max {{ max_upload_size_mb }} MB</small>
+            <small>PDF &middot; Max {{ max_upload_size_mb }} MB</small>
         </label>
         <div class="upload-selection" data-upload-selection hidden></div>
         <div class="preparation-state" data-preparation-state hidden>
             <strong data-preparation-title>Preparing your document</strong>
             <span data-preparation-message>We are organizing the information required for questions.</span>
             <progress data-preparation-progress max="4" value="0"></progress>
+            <button class="button button-secondary" type="button" data-retry-upload hidden>Retry</button>
         </div>
-        <button class="button button-primary" type="submit" data-upload-submit>Upload and prepare</button>
+        <button class="button button-primary" type="submit" data-upload-submit>Upload</button>
     </form>
 </section>
 
@@ -58,9 +62,15 @@
                     {% include "components/status_badge.html" with tone=item.status_tone label=item.status_label %}
                     <span class="doc-date">{{ item.document.file_size|filesizeformat }}</span>
                     <span class="row-actions">
+                        {% if item.is_failed %}
+                            <button class="text-button" type="button" data-retry-document data-document-id="{{ item.document.id }}">Retry</button>
+                        {% endif %}
                         <a class="text-button" href="{% url 'document-download' item.document.id %}">Download</a>
                         <button class="text-button danger" type="button" data-delete-document data-delete-url="{% url 'document-detail' item.document.id %}" data-delete-redirect="">Delete</button>
                     </span>
+                    <a class="row-chevron" href="{% url 'web-document-detail' item.document.id %}" aria-label="Open {{ item.document.original_filename }}">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+                    </a>
                 </article>
             {% endfor %}
         </div>

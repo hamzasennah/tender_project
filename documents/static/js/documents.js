@@ -8,10 +8,36 @@
 
     function friendlyProcessingError(error) {
         const message = String(error?.message || "").toLowerCase();
-        if (message.includes("rate") || message.includes("timeout") || message.includes("provider") || message.includes("429") || message.includes("503")) {
-            return "Temporary processing issue. We could not finish preparing this document right now. Please try again in a moment.";
+        const status = error?.response?.status;
+        if (message.includes("rate") || message.includes("timeout") || status >= 500) {
+            return "The service is temporarily unavailable. Try again in a moment.";
         }
-        return "We could not finish preparing this document. Please try again in a moment.";
+        return "The service is temporarily unavailable. Try again in a moment.";
+    }
+
+    function setPreparationFailed(state, error) {
+        state.title.textContent = "We couldn't prepare this document.";
+        state.message.textContent = friendlyProcessingError(error);
+        state.progress.hidden = true;
+        if (state.submit && state.documentId) state.submit.hidden = true;
+        if (state.retry) state.retry.hidden = !state.documentId;
+    }
+
+    function setPreparationReady(state) {
+        state.title.textContent = "Ready";
+        state.message.textContent = "This document is ready for questions.";
+        state.progress.hidden = true;
+        if (state.submit) state.submit.hidden = true;
+        if (state.retry) state.retry.hidden = true;
+    }
+
+    function setPreparationRunning(state, label, value) {
+        state.title.textContent = "Preparing document...";
+        state.message.textContent = label;
+        state.progress.hidden = false;
+        state.progress.value = value;
+        if (state.submit && state.documentId) state.submit.hidden = true;
+        if (state.retry) state.retry.hidden = true;
     }
 
     async function prepareDocument(documentId, state) {
@@ -24,9 +50,7 @@
 
         for (let index = 0; index < steps.length; index += 1) {
             const step = steps[index];
-            state.title.textContent = "Preparing your document";
-            state.message.textContent = step.label;
-            state.progress.value = index;
+            setPreparationRunning(state, step.label, index);
             try {
                 await TenderApp.request(step.url, { method: "POST", timeout: 180000 });
             } catch (error) {
@@ -34,6 +58,24 @@
             }
             state.progress.value = index + 1;
         }
+        setPreparationReady(state);
+    }
+
+    function initUploadPanel() {
+        const panel = document.querySelector("[data-upload-panel]");
+        if (!panel) return;
+        const openButtons = document.querySelectorAll("[data-open-upload]");
+        const closeButton = panel.querySelector("[data-close-upload]");
+        const open = () => {
+            panel.hidden = false;
+            panel.scrollIntoView({ behavior: "smooth", block: "start" });
+            panel.querySelector("[data-file-input]")?.focus();
+        };
+        openButtons.forEach((button) => button.addEventListener("click", open));
+        closeButton?.addEventListener("click", () => {
+            panel.hidden = true;
+        });
+        if (new URLSearchParams(window.location.search).get("new") === "1") open();
     }
 
     function initUpload() {
@@ -48,6 +90,15 @@
         const prepTitle = form.querySelector("[data-preparation-title]");
         const prepMessage = form.querySelector("[data-preparation-message]");
         const prepProgress = form.querySelector("[data-preparation-progress]");
+        const retry = form.querySelector("[data-retry-upload]");
+        const state = {
+            title: prepTitle,
+            message: prepMessage,
+            progress: prepProgress,
+            retry,
+            submit,
+            documentId: null,
+        };
 
         const syncSelection = () => {
             const file = input.files?.[0];
@@ -94,23 +145,30 @@
                     method: "POST",
                     body: new FormData(form),
                 });
+                state.documentId = data.id;
                 if (form.dataset.prepareAfterUpload === "true") {
-                    await prepareDocument(data.id, {
-                        title: prepTitle,
-                        message: prepMessage,
-                        progress: prepProgress,
-                    });
+                    await prepareDocument(data.id, state);
                 }
-                TenderApp.showToast("Document ready.");
                 window.location.href = `/documents/${data.id}/`;
             } catch (error) {
-                if (prepTitle && prepMessage) {
-                    prepTitle.textContent = "Temporary processing issue";
-                    prepMessage.textContent = friendlyProcessingError(error);
-                }
-                TenderApp.showToast(friendlyProcessingError(error), "error");
+                if (prepTitle && prepMessage) setPreparationFailed(state, error);
                 submit.disabled = false;
-                submit.textContent = "Upload and prepare";
+                submit.textContent = state.documentId ? "Upload" : "Upload";
+            }
+        });
+
+        retry?.addEventListener("click", async () => {
+            if (!state.documentId) return;
+            retry.disabled = true;
+            submit.disabled = true;
+            try {
+                await prepareDocument(state.documentId, state);
+                window.location.href = `/documents/${state.documentId}/`;
+            } catch (error) {
+                setPreparationFailed(state, error);
+            } finally {
+                retry.disabled = false;
+                submit.disabled = false;
             }
         });
     }
@@ -153,9 +211,41 @@
         });
     }
 
+    function initRetryDocuments() {
+        document.querySelectorAll("[data-retry-document]").forEach((button) => {
+            button.addEventListener("click", async () => {
+                const documentId = button.dataset.documentId;
+                if (!documentId) return;
+                button.disabled = true;
+                button.textContent = "Retrying...";
+                const state = {
+                    title: document.querySelector("[data-preparing-notice] strong") || button,
+                    message: document.querySelector("[data-preparing-notice] p") || button,
+                    progress: document.createElement("progress"),
+                    retry: button,
+                    documentId,
+                };
+                try {
+                    await prepareDocument(documentId, state);
+                    window.location.href = `/documents/${documentId}/`;
+                } catch (error) {
+                    if (state.title !== button) {
+                        state.title.textContent = "We couldn't prepare this document.";
+                        state.message.textContent = friendlyProcessingError(error);
+                    }
+                    button.textContent = "Retry";
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
+        initUploadPanel();
         initUpload();
         initFilter();
         initDelete();
+        initRetryDocuments();
     });
 })();

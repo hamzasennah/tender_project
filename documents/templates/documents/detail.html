@@ -9,6 +9,7 @@
     data-pe-url="{% url 'document-prompt-engineering-ask' document.id %}"
     data-rag-url="{% url 'document-rag-ask' document.id %}"
     data-raptor-url="{% url 'document-raptor-ask' document.id %}"
+    data-document-url="{% url 'document-download' document.id %}"
     data-can-ask="{% if can_ask %}true{% else %}false{% endif %}">
     <div>
         <nav class="breadcrumbs" aria-label="Breadcrumb">
@@ -45,7 +46,10 @@
             {% if not can_ask %}
                 <div class="notice-panel" data-preparing-notice>
                     <strong>{% if summary.is_failed %}Document unavailable{% else %}Preparing your document{% endif %}</strong>
-                    <p>{% if summary.is_failed %}We could not finish preparing this document. Try importing it again or review the technical details below.{% else %}We are organizing the information required for grounded answers. This may take a moment.{% endif %}</p>
+                    <p>{% if summary.is_failed %}We couldn't prepare this document. The service is temporarily unavailable. Try again in a moment.{% else %}We are organizing the information required for grounded answers. This may take a moment.{% endif %}</p>
+                    {% if summary.is_failed %}
+                        <button class="button button-secondary" type="button" data-retry-document data-document-id="{{ document.id }}">Retry</button>
+                    {% endif %}
                 </div>
             {% endif %}
 
@@ -70,7 +74,7 @@
         <section class="answer-column" data-answer-panel>
             <div class="answer-placeholder">
                 <h2>Answer</h2>
-                <p>Ask a question to receive a clear answer with evidence from the PDF.</p>
+                <p>The answer will appear here, followed by supporting evidence from the document.</p>
             </div>
         </section>
     </div>

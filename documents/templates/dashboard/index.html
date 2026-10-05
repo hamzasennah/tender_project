@@ -6,9 +6,9 @@
     <div>
         <p class="kicker">{{ greeting }}, {{ request.user.username }}</p>
         <h1>Your documents</h1>
-        <p>Manage and review your tender documents. Import a PDF, let Tender Intelligence prepare it, then ask questions grounded in the document.</p>
+        <p>Review tender PDFs, preparation status and grounded answers.</p>
     </div>
-    <a class="button button-primary" href="{% url 'web-document-list' %}#new-document">New document</a>
+    <a class="button button-primary" href="{% url 'web-document-list' %}?new=1">New document</a>
 </section>
 
 <section class="document-table-section" aria-label="Recent documents">
@@ -31,7 +31,10 @@
                     </span>
                     {% include "components/status_badge.html" with tone=item.status_tone label=item.status_label %}
                     <span class="doc-date">{{ item.document.created_at|date:"M d, Y" }}</span>
-                    <span class="row-arrow" aria-hidden="true">-&gt;</span>
+                    <span class="row-actions" aria-hidden="true"></span>
+                    <span class="row-chevron" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+                    </span>
                 </a>
             {% endfor %}
         </div>
@@ -39,7 +42,7 @@
         <div class="empty-state editorial">
             <h2>No documents yet</h2>
             <p>Upload your first tender document to begin reviewing deadlines, guarantees, eligibility requirements and obligations.</p>
-            <a class="button button-primary" href="{% url 'web-document-list' %}#new-document">New document</a>
+            <a class="button button-primary" href="{% url 'web-document-list' %}?new=1">New document</a>
         </div>
     {% endif %}
 </section>

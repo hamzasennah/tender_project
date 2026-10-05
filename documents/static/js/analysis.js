@@ -10,8 +10,9 @@
 
     function friendlyError(error) {
         const message = String(error?.message || "").toLowerCase();
-        if (message.includes("rate") || message.includes("timeout") || message.includes("429") || message.includes("503")) {
-            return "Temporary processing issue. We could not complete the answer right now. Please try again in a moment.";
+        const status = error?.response?.status;
+        if (message.includes("rate") || message.includes("timeout") || status >= 500) {
+            return "We couldn't answer from this document right now. Try again in a moment.";
         }
         if (message.includes("not found") || message.includes("missing") || message.includes("chunks") || message.includes("embedding")) {
             return "This document is still being prepared for questions. Please try again shortly.";
@@ -37,12 +38,13 @@
     function evidenceFromSearch(searchPayload) {
         const results = Array.isArray(searchPayload?.results) ? searchPayload.results : [];
         return results.slice(0, 3).map((result, index) => ({
-            label: `Passage ${index + 1}`,
+            label: result.page ? `Page ${result.page}` : `Passage ${index + 1}`,
+            section: result.section || result.heading || "Document excerpt",
             text: excerpt(result.text || ""),
         })).filter((item) => item.text);
     }
 
-    function renderEvidence(items) {
+    function renderEvidence(items, documentUrl) {
         if (!items.length) {
             return `
                 <section>
@@ -57,8 +59,12 @@
                 <div class="evidence-list">
                     ${items.map((item) => `
                         <article class="evidence-item">
-                            <strong>${escapeHtml(item.label)}</strong>
+                            <div class="evidence-meta">
+                                <strong>${escapeHtml(item.label)}</strong>
+                                <span>${escapeHtml(item.section)}</span>
+                            </div>
                             <blockquote>${escapeHtml(item.text)}</blockquote>
+                            <a class="quiet-link evidence-link" href="${escapeHtml(documentUrl)}">Open in document</a>
                         </article>
                     `).join("")}
                 </div>
@@ -66,7 +72,7 @@
         `;
     }
 
-    function renderAnswer(panel, answerPayload, searchPayload, question) {
+    function renderAnswer(panel, answerPayload, searchPayload, question, documentUrl) {
         const evidence = evidenceFromSearch(searchPayload);
         panel.innerHTML = `
             <div class="answer-shell">
@@ -75,7 +81,7 @@
                     <h2>Answer</h2>
                     <div class="answer-copy">${escapeHtml(answerPayload.answer || "No answer returned.")}</div>
                 </section>
-                ${renderEvidence(evidence)}
+                ${renderEvidence(evidence, documentUrl)}
             </div>
         `;
     }
@@ -119,7 +125,7 @@
                     json: { question, top_k: 5 },
                     timeout: 180000,
                 });
-                renderAnswer(panel, answerPayload, searchPayload, question);
+                renderAnswer(panel, answerPayload, searchPayload, question, workspace.dataset.documentUrl || "#");
             } catch (error) {
                 panel.innerHTML = `
                     <div class="notice-panel">
@@ -127,7 +133,6 @@
                         <p>Please retry in a moment. If the document was just uploaded, preparation may still be finishing.</p>
                     </div>
                 `;
-                TenderApp.showToast(friendlyError(error), "error");
             } finally {
                 submit.disabled = false;
             }
