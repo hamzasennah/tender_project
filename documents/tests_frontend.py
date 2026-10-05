@@ -70,6 +70,14 @@ class FrontendViewTests(TestCase):
         self.assertContains(response, "own.pdf")
         self.assertTemplateUsed(response, "dashboard/index.html")
 
+    def test_confirm_modal_is_hidden_by_default(self):
+        self.login()
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-confirm-modal hidden aria-hidden="true"')
+
     def test_document_library_is_scoped_to_owner(self):
         self.create_document(filename="own.pdf")
         self.create_document(owner=self.other_user, filename="other.pdf")

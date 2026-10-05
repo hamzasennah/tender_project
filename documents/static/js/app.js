@@ -72,11 +72,13 @@
         text.textContent = message;
         accept.textContent = acceptLabel;
         modal.hidden = false;
+        modal.setAttribute("aria-hidden", "false");
         accept.focus();
 
         return new Promise((resolve) => {
             const cleanup = (value) => {
                 modal.hidden = true;
+                modal.setAttribute("aria-hidden", "true");
                 accept.removeEventListener("click", onAccept);
                 cancel.removeEventListener("click", onCancel);
                 modal.removeEventListener("click", onBackdrop);
