@@ -86,6 +86,7 @@ class LLMProvider:
 class RAGContext:
     text: str
     sources: list
+    evidence_candidates: list
     metadata: dict
 
 
@@ -616,6 +617,23 @@ def _source_payload(result, source_number):
     return payload
 
 
+def _evidence_candidate_payload(result, source_payload, context_text):
+    payload = {
+        "source": source_payload["source"],
+        "chunk_id": source_payload["chunk_id"],
+        "document_id": source_payload["document_id"],
+        "chunk_index": source_payload["chunk_index"],
+        "similarity_score": source_payload["similarity_score"],
+        "text": context_text,
+        "chunk_metadata": result.get("chunk_metadata") or {},
+    }
+    if "matched_subqueries" in source_payload:
+        payload["matched_subqueries"] = source_payload["matched_subqueries"]
+    if "multi_query_score" in source_payload:
+        payload["multi_query_score"] = source_payload["multi_query_score"]
+    return payload
+
+
 def _retrieval_result_score(result):
     for key in ("final_score", "hybrid_score", "similarity_score"):
         value = result.get(key)
@@ -626,6 +644,430 @@ def _retrieval_result_score(result):
         except (TypeError, ValueError):
             continue
     return 0.0
+
+
+NUMBER_WORDS = {
+    "zero": 0,
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+    "eleven": 11,
+    "twelve": 12,
+    "thirteen": 13,
+    "fourteen": 14,
+    "fifteen": 15,
+    "sixteen": 16,
+    "seventeen": 17,
+    "eighteen": 18,
+    "nineteen": 19,
+    "twenty": 20,
+    "thirty": 30,
+    "forty": 40,
+    "fifty": 50,
+    "sixty": 60,
+    "seventy": 70,
+    "eighty": 80,
+    "ninety": 90,
+    "un": 1,
+    "une": 1,
+    "deux": 2,
+    "trois": 3,
+    "quatre": 4,
+    "cinq": 5,
+    "six": 6,
+    "sept": 7,
+    "huit": 8,
+    "neuf": 9,
+    "dix": 10,
+    "onze": 11,
+    "douze": 12,
+    "treize": 13,
+    "quatorze": 14,
+    "quinze": 15,
+    "seize": 16,
+    "vingt": 20,
+    "trente": 30,
+    "quarante": 40,
+    "cinquante": 50,
+    "soixante": 60,
+}
+
+MONTH_ALIASES = {
+    "janvier": 1,
+    "january": 1,
+    "jan": 1,
+    "fevrier": 2,
+    "february": 2,
+    "feb": 2,
+    "mars": 3,
+    "march": 3,
+    "mar": 3,
+    "avril": 4,
+    "april": 4,
+    "apr": 4,
+    "mai": 5,
+    "may": 5,
+    "juin": 6,
+    "june": 6,
+    "jun": 6,
+    "juillet": 7,
+    "july": 7,
+    "jul": 7,
+    "aout": 8,
+    "august": 8,
+    "aug": 8,
+    "septembre": 9,
+    "september": 9,
+    "sept": 9,
+    "sep": 9,
+    "octobre": 10,
+    "october": 10,
+    "oct": 10,
+    "novembre": 11,
+    "november": 11,
+    "nov": 11,
+    "decembre": 12,
+    "december": 12,
+    "dec": 12,
+}
+
+TOKEN_STOPWORDS = {
+    "the",
+    "and",
+    "for",
+    "from",
+    "with",
+    "what",
+    "which",
+    "when",
+    "where",
+    "does",
+    "document",
+    "answer",
+    "provided",
+    "dans",
+    "avec",
+    "pour",
+    "quel",
+    "quelle",
+    "quels",
+    "quelles",
+    "est",
+    "sont",
+    "des",
+    "les",
+    "une",
+    "un",
+    "aux",
+    "sur",
+    "par",
+    "que",
+    "qui",
+    "quoi",
+    "offres",
+    "offre",
+}
+
+UNANSWERABLE_MARKERS = (
+    "information not found",
+    "not found in the provided document",
+    "does not specify",
+    "does not state",
+    "not specified",
+    "not provided",
+    "not mentioned",
+    "not available",
+    "non indique",
+    "non indiquee",
+    "n indique pas",
+    "ne precise pas",
+    "pas precise",
+    "pas mentionne",
+    "pas trouve",
+)
+
+
+def _number_value(value):
+    text = _fold_text(value).replace("-", " ")
+    if re.fullmatch(r"\d+(?:[,.]\d+)?", text):
+        return text.replace(",", ".").lstrip("0") or "0"
+    total = 0
+    matched = False
+    for token in text.split():
+        number = NUMBER_WORDS.get(token)
+        if number is None:
+            continue
+        total += number
+        matched = True
+    return str(total) if matched else None
+
+
+def _extract_structured_claims(text):
+    folded = _fold_text(text)
+    claims = set()
+
+    for match in re.finditer(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b", folded):
+        day, month, year = match.groups()
+        if len(year) == 2:
+            year = f"20{year}"
+        claims.add(("date", f"{int(year):04d}-{int(month):02d}-{int(day):02d}"))
+
+    month_names = "|".join(sorted(MONTH_ALIASES, key=len, reverse=True))
+    month_date_pattern = rf"\b(\d{{1,2}})\s+({month_names})\.?\s+(\d{{2,4}})\b"
+    for match in re.finditer(month_date_pattern, folded):
+        day, month_name, year = match.groups()
+        if len(year) == 2:
+            year = f"20{year}"
+        claims.add(
+            (
+                "date",
+                f"{int(year):04d}-{MONTH_ALIASES[month_name]:02d}-{int(day):02d}",
+            )
+        )
+
+    for match in re.finditer(
+        r"\b([01]?\d|2[0-3])\s*(?::|h|heures?|hours?)\s*([0-5]\d)?\b",
+        folded,
+    ):
+        hour, minute = match.groups()
+        claims.add(("time", f"{int(hour):02d}:{int(minute or 0):02d}"))
+
+    number_pattern = r"\d+(?:[,.]\d+)?|[a-z]+(?:[-\s][a-z]+)?"
+    for match in re.finditer(
+        rf"\b({number_pattern})\s*(?:%|percent|per cent|pour\s*cent)(?=\W|$)",
+        folded,
+    ):
+        number = _number_value(match.group(1))
+        if number is not None:
+            claims.add(("percentage", number))
+
+    for match in re.finditer(
+        rf"\b({number_pattern})\s*(jours?|days?|mois|months?|semaines?|weeks?)\b",
+        folded,
+    ):
+        number = _number_value(match.group(1))
+        if number is None:
+            continue
+        unit = match.group(2)
+        if unit.startswith(("jour", "day")):
+            normalized_unit = "day"
+        elif unit.startswith(("semaine", "week")):
+            normalized_unit = "week"
+        else:
+            normalized_unit = "month"
+        claims.add(("duration", f"{number}:{normalized_unit}"))
+
+    for match in re.finditer(
+        r"\b\d+(?:[\s.]\d{3})*(?:[,.]\d+)?\s*(?:mad|dh|eur|euros?|usd|\$|€)\b",
+        folded,
+    ):
+        claims.add(("amount", re.sub(r"\s+", "", match.group(0))))
+
+    for match in re.finditer(r"\b[a-z]{1,8}[-/]\d{1,6}(?:[-/][a-z0-9]{1,10})+\b", folded):
+        claims.add(("reference", match.group(0).replace(" ", "")))
+
+    return claims
+
+
+def _content_tokens(*values):
+    tokens = set()
+    for value in values:
+        for token in re.findall(r"[a-z0-9]{3,}", _fold_text(value)):
+            if token not in TOKEN_STOPWORDS:
+                tokens.add(token)
+    return tokens
+
+
+def _is_unanswerable_answer(answer):
+    folded = _fold_text(answer)
+    if folded == _fold_text(NOT_FOUND_ANSWER):
+        return True
+    return any(marker in folded for marker in UNANSWERABLE_MARKERS)
+
+
+def _metadata_value(metadata, keys):
+    for key in keys:
+        value = metadata.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _page_from_metadata(metadata):
+    return _metadata_value(
+        metadata,
+        (
+            "page",
+            "page_number",
+            "source_page",
+            "start_page",
+            "first_page",
+            "page_start",
+        ),
+    )
+
+
+def _section_from_metadata(metadata):
+    return _metadata_value(
+        metadata,
+        (
+            "section",
+            "heading",
+            "title",
+            "clause",
+            "source_section",
+        ),
+    )
+
+
+def _evidence_excerpt(text, answer_claims, answer_tokens, question_tokens, max_chars=520):
+    cleaned = _clean_context_text(text)
+    if len(cleaned) <= max_chars:
+        return cleaned
+
+    sentences = [sentence.strip() for sentence in re.split(r"(?<=[.!?;:])\s+", cleaned)]
+    best_sentence = ""
+    best_score = -1
+    for sentence in sentences:
+        sentence_claims = _extract_structured_claims(sentence)
+        sentence_tokens = _content_tokens(sentence)
+        score = (len(answer_claims & sentence_claims) * 8) + (
+            len(answer_tokens & sentence_tokens) * 2
+        ) + len(question_tokens & sentence_tokens)
+        if score > best_score:
+            best_score = score
+            best_sentence = sentence
+
+    excerpt = best_sentence or cleaned[:max_chars]
+    if len(excerpt) <= max_chars:
+        return excerpt
+    return f"{excerpt[:max_chars].rstrip()}..."
+
+
+def _supporting_evidence_item(candidate, info, answer_claims, answer_tokens, question_tokens):
+    metadata = candidate.get("chunk_metadata") or {}
+    page = _page_from_metadata(metadata)
+    section = _section_from_metadata(metadata)
+    item = {
+        "source": candidate["source"],
+        "chunk_id": candidate["chunk_id"],
+        "document_id": candidate["document_id"],
+        "chunk_index": candidate["chunk_index"],
+        "similarity_score": candidate["similarity_score"],
+        "support_score": round(info["score"], 4),
+        "support_reason": (
+            "matched_answer_values" if info["claim_matches"] else "matched_answer_terms"
+        ),
+        "text": _evidence_excerpt(
+            candidate.get("text", ""),
+            answer_claims,
+            answer_tokens,
+            question_tokens,
+        ),
+    }
+    if page is not None:
+        item["page"] = page
+    if section is not None:
+        item["section"] = str(section)
+    if "matched_subqueries" in candidate:
+        item["matched_subqueries"] = candidate["matched_subqueries"]
+    return item
+
+
+def select_supporting_evidence(question, answer, evidence_candidates, max_items=4):
+    answer_claims = _extract_structured_claims(answer)
+    if _is_unanswerable_answer(answer) and not answer_claims:
+        return [], {
+            "selected_count": 0,
+            "answer_claim_count": 0,
+            "matched_claim_count": 0,
+            "strategy": "unanswerable_answer_has_no_evidence",
+        }
+
+    answer_tokens = _content_tokens(answer)
+    question_tokens = _content_tokens(question)
+    infos = []
+    for rank, candidate in enumerate(evidence_candidates):
+        text = candidate.get("text", "")
+        candidate_claims = _extract_structured_claims(text)
+        candidate_tokens = _content_tokens(text)
+        claim_matches = answer_claims & candidate_claims
+        answer_overlap = answer_tokens & candidate_tokens
+        question_overlap = question_tokens & candidate_tokens
+        if answer_claims and not claim_matches:
+            continue
+        if not answer_claims and len(answer_overlap) < 2 and len(question_overlap) < 2:
+            continue
+        score = (
+            len(claim_matches) * 12
+            + len(answer_overlap) * 2
+            + len(question_overlap)
+            + max(0.0, _retrieval_result_score(candidate)) * 0.01
+            - (rank * 0.001)
+        )
+        infos.append(
+            {
+                "candidate": candidate,
+                "claim_matches": claim_matches,
+                "answer_overlap": answer_overlap,
+                "question_overlap": question_overlap,
+                "score": score,
+            }
+        )
+
+    selected = []
+    uncovered_claims = set(answer_claims)
+    available = list(infos)
+    if answer_claims:
+        while uncovered_claims and available and len(selected) < max_items:
+            best = max(
+                available,
+                key=lambda info: (
+                    len(info["claim_matches"] & uncovered_claims),
+                    info["score"],
+                ),
+            )
+            if not (best["claim_matches"] & uncovered_claims):
+                break
+            selected.append(best)
+            uncovered_claims -= best["claim_matches"]
+            available.remove(best)
+    else:
+        selected = sorted(infos, key=lambda info: info["score"], reverse=True)[:max_items]
+
+    if answer_claims and not selected and infos:
+        selected = sorted(infos, key=lambda info: info["score"], reverse=True)[:1]
+
+    evidence = [
+        _supporting_evidence_item(
+            info["candidate"],
+            info,
+            answer_claims,
+            answer_tokens,
+            question_tokens,
+        )
+        for info in selected
+    ]
+    matched_claims = set()
+    for info in selected:
+        matched_claims.update(info["claim_matches"])
+    return evidence, {
+        "selected_count": len(evidence),
+        "answer_claim_count": len(answer_claims),
+        "matched_claim_count": len(matched_claims),
+        "strategy": (
+            "structured_answer_value_matching"
+            if answer_claims
+            else "answer_term_overlap_matching"
+        ),
+    }
 
 
 def _merge_multi_query_results(document, normalized_question, limit, decomposition, payloads):
@@ -827,6 +1269,7 @@ def build_rag_context(search_payload, max_context_chars=None):
     )
     blocks = []
     sources = []
+    evidence_candidates = []
     used_chars = 0
     truncated = False
     omitted_count = 0
@@ -862,8 +1305,10 @@ def build_rag_context(search_payload, max_context_chars=None):
             block = f"{header}{text}"
             truncated = True
 
+        source = _source_payload(result, source_number)
         blocks.append(block)
-        sources.append(_source_payload(result, source_number))
+        sources.append(source)
+        evidence_candidates.append(_evidence_candidate_payload(result, source, text))
         used_chars += separator_chars + len(block)
 
         if used_chars >= max_chars:
@@ -873,6 +1318,7 @@ def build_rag_context(search_payload, max_context_chars=None):
     return RAGContext(
         text=context_text,
         sources=sources,
+        evidence_candidates=evidence_candidates,
         metadata={
             "max_context_chars": max_chars,
             "context_char_count": len(context_text),
@@ -911,6 +1357,7 @@ def _not_found_payload(document, question, limit, context, search_payload):
         "document_id": document.id,
         "answer": NOT_FOUND_ANSWER,
         "sources": [],
+        "supporting_evidence": [],
         "rag_metadata": {
             "question_length": len(question),
             "top_k": limit,
@@ -928,6 +1375,12 @@ def _not_found_payload(document, question, limit, context, search_payload):
                 "called": False,
             },
             "grounding": "answer_only_from_retrieved_context",
+            "evidence": {
+                "selected_count": 0,
+                "answer_claim_count": 0,
+                "matched_claim_count": 0,
+                "strategy": "not_found_no_context",
+            },
             "limits": _rag_limits_metadata(),
         },
     }
@@ -993,6 +1446,12 @@ def answer_document_question(
             response_status=status.HTTP_502_BAD_GATEWAY,
         )
 
+    supporting_evidence, evidence_metadata = select_supporting_evidence(
+        normalized_question,
+        answer,
+        context.evidence_candidates,
+    )
+
     logger.info(
         "RAG answer completed",
         extra={
@@ -1009,6 +1468,7 @@ def answer_document_question(
         "document_id": document.id,
         "answer": answer,
         "sources": context.sources,
+        "supporting_evidence": supporting_evidence,
         "rag_metadata": {
             "question_length": len(normalized_question),
             "top_k": limit,
@@ -1029,6 +1489,7 @@ def answer_document_question(
                 "max_output_tokens": get_rag_llm_max_output_tokens(),
             },
             "grounding": "answer_only_from_retrieved_context",
+            "evidence": evidence_metadata,
             "fallback_answer": NOT_FOUND_ANSWER,
             "limits": _rag_limits_metadata(),
         },

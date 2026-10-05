@@ -231,6 +231,16 @@ class FrontendViewTests(TestCase):
         self.assertNotIn("provider", combined)
         self.assertNotIn("showToast(friendlyProcessingError", documents_contents)
 
+    def test_analysis_static_uses_answer_supporting_evidence(self):
+        with open("documents/static/js/analysis.js", encoding="utf-8") as analysis_script:
+            analysis_contents = analysis_script.read()
+
+        self.assertIn("supporting_evidence", analysis_contents)
+        self.assertIn("evidenceFromAnswer", analysis_contents)
+        self.assertNotIn("evidenceFromSearch", analysis_contents)
+        self.assertNotIn("workspace.dataset.searchUrl", analysis_contents)
+        self.assertIn("#page=", analysis_contents)
+
     def test_home_redirects_by_authentication_state(self):
         anonymous_response = self.client.get(reverse("home"))
         self.assertEqual(anonymous_response.status_code, 302)

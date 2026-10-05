@@ -35,13 +35,21 @@
         return `${normalized.slice(0, 520).trim()}...`;
     }
 
-    function evidenceFromSearch(searchPayload) {
-        const results = Array.isArray(searchPayload?.results) ? searchPayload.results : [];
-        return results.slice(0, 3).map((result, index) => ({
-            label: result.page ? `Page ${result.page}` : `Passage ${index + 1}`,
-            section: result.section || result.heading || "Document excerpt",
-            text: excerpt(result.text || ""),
+    function evidenceFromAnswer(answerPayload) {
+        const evidence = Array.isArray(answerPayload?.supporting_evidence)
+            ? answerPayload.supporting_evidence
+            : [];
+        return evidence.slice(0, 4).map((item) => ({
+            label: item.page ? `Page ${item.page}` : (item.section || item.source || "Document excerpt"),
+            section: item.section || "Document excerpt",
+            text: excerpt(item.text || ""),
+            page: item.page,
         })).filter((item) => item.text);
+    }
+
+    function evidenceLink(documentUrl, item) {
+        if (!item.page || !documentUrl || documentUrl === "#") return documentUrl || "#";
+        return `${documentUrl}#page=${encodeURIComponent(item.page)}`;
     }
 
     function renderEvidence(items, documentUrl) {
@@ -64,7 +72,7 @@
                                 <span>${escapeHtml(item.section)}</span>
                             </div>
                             <blockquote>${escapeHtml(item.text)}</blockquote>
-                            <a class="quiet-link evidence-link" href="${escapeHtml(documentUrl)}">Open in document</a>
+                            <a class="quiet-link evidence-link" href="${escapeHtml(evidenceLink(documentUrl, item))}">Open in document</a>
                         </article>
                     `).join("")}
                 </div>
@@ -72,8 +80,8 @@
         `;
     }
 
-    function renderAnswer(panel, answerPayload, searchPayload, question, documentUrl) {
-        const evidence = evidenceFromSearch(searchPayload);
+    function renderAnswer(panel, answerPayload, question, documentUrl) {
+        const evidence = evidenceFromAnswer(answerPayload);
         panel.innerHTML = `
             <div class="answer-shell">
                 <div class="question-box">${escapeHtml(question)}</div>
@@ -115,17 +123,12 @@
             submit.disabled = true;
             renderLoading(panel);
             try {
-                const searchPayload = await TenderApp.request(workspace.dataset.searchUrl, {
-                    method: "POST",
-                    json: { query: question, top_k: 3 },
-                    timeout: 120000,
-                });
                 const answerPayload = await TenderApp.request(workspace.dataset.askUrl, {
                     method: "POST",
                     json: { question, top_k: 5 },
                     timeout: 180000,
                 });
-                renderAnswer(panel, answerPayload, searchPayload, question, workspace.dataset.documentUrl || "#");
+                renderAnswer(panel, answerPayload, question, workspace.dataset.documentUrl || "#");
             } catch (error) {
                 panel.innerHTML = `
                     <div class="notice-panel">
