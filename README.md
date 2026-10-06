@@ -2,7 +2,7 @@
 
 Tender Intelligence est une application Django REST qui permet de charger des documents PDF d'appels d'offres, d'en extraire le contenu, puis de l'interroger avec trois approches IA independantes : Prompt Engineering, RAG et RAPTOR.
 
-La V1 est finalisee au commit de reference `50e7c473df0d879f0f5c6390b4f019094cf8ad09`.
+La V1 est finalisee, documentee et validee par l'audit de cloture.
 
 ## Objectif
 
@@ -112,4 +112,4 @@ Les details et limites d'interpretation sont documentes dans [docs/benchmarks.md
 
 ## Statut
 
-V1 finalisee et documentee. Le code fonctionnel est gele au commit de reference indique ci-dessus.
+V1 finalisee, documentee et validee par l'audit de cloture. Le code fonctionnel est gele pour cette version.
