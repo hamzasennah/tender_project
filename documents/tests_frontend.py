@@ -270,6 +270,8 @@ class FrontendViewTests(TestCase):
         self.assertContains(response, f'data-embeddings-url="{reverse("document-chunk-embeddings", args=[document.id])}"')
         self.assertContains(response, f'data-raptor-index-url="{reverse("document-raptor-index", args=[document.id])}"')
         self.assertContains(response, f'data-raptor-url="{reverse("document-raptor-ask", args=[document.id])}"')
+        self.assertContains(response, "Uploaded")
+        self.assertContains(response, f"Ref {document.id}")
 
     def test_research_lab_preselects_owned_document(self):
         first = self.create_prepared_document(filename="first.pdf")
@@ -330,8 +332,9 @@ class FrontendViewTests(TestCase):
         self.assertIn("ensureRaptorReady", contents)
         self.assertIn("documentInput?.dataset?.embeddingsUrl", contents)
         self.assertIn("documentInput?.dataset?.raptorIndexUrl", contents)
-        self.assertIn("Preparing embeddings for RAPTOR...", contents)
-        self.assertIn("Preparing hierarchical index...", contents)
+        self.assertIn("Preparing RAPTOR index...", contents)
+        self.assertNotIn("Preparing embeddings for RAPTOR...", contents)
+        self.assertNotIn("Preparing hierarchical index...", contents)
         self.assertIn("if (methodKey === \"raptor\")", contents)
         self.assertIn("RAPTOR index is not ready.", contents)
         self.assertIn("No supporting passage exposed by this method.", contents)
@@ -354,6 +357,41 @@ class FrontendViewTests(TestCase):
         self.assertIn("Promise.allSettled", contents)
         self.assertIn(": { status: \"error\", error: result.reason }", contents)
         self.assertIn("Retry", contents)
+
+    def test_research_lab_static_uses_single_and_compare_layout_modes(self):
+        with open("documents/static/js/research_lab.js", encoding="utf-8") as research_script:
+            contents = research_script.read()
+        with open("documents/static/css/app.css", encoding="utf-8") as styles:
+            css = styles.read()
+
+        self.assertIn('const mode = entries.length === 1 ? "single" : "compare";', contents)
+        self.assertIn("comparisonSummary(states)", contents)
+        self.assertIn("research-result-list", contents)
+        self.assertIn('data-result-mode="single"', css)
+        self.assertIn('data-result-mode="compare"', css)
+        self.assertIn("max-width: 860px", css)
+
+    def test_research_lab_static_summary_uses_only_available_metrics(self):
+        with open("documents/static/js/research_lab.js", encoding="utf-8") as research_script:
+            contents = research_script.read()
+
+        self.assertIn("comparisonSummary", contents)
+        self.assertIn("[\"Latency\"", contents)
+        self.assertIn("[\"Context\"", contents)
+        self.assertIn("[\"Evidence\"", contents)
+        self.assertIn("metadata.context_char_count", contents)
+        self.assertIn('return row ? row[1] : "-"', contents)
+        self.assertNotIn("accuracy", contents.lower())
+        self.assertNotIn("confidence", contents.lower())
+
+    def test_research_lab_static_cleans_internal_evidence_labels(self):
+        with open("documents/static/js/research_lab.js", encoding="utf-8") as research_script:
+            contents = research_script.read()
+
+        self.assertIn('item.page ? `Page ${item.page}` : item.section ? item.section : "Retrieved passage"', contents)
+        self.assertIn("`Source ${index + 1}`", contents)
+        self.assertIn('"Original passage"', contents)
+        self.assertNotIn('title: item.source || "RAPTOR source"', contents)
 
     def test_frontend_static_translates_technical_errors(self):
         with open("documents/static/js/analysis.js", encoding="utf-8") as analysis_script:

@@ -945,17 +945,62 @@ progress::-webkit-progress-value {
 
 .research-result-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
+}
+
+.research-result-list {
+    display: grid;
+    gap: 18px;
+}
+
+.research-result-grid[data-result-mode="single"] .research-result-list {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.research-result-grid[data-result-mode="compare"] .research-result-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.comparison-summary {
+    margin-bottom: 22px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.comparison-summary table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.comparison-summary th,
+.comparison-summary td {
+    padding: 6px 8px 6px 0;
+    text-align: left;
+    border-bottom: 1px solid rgba(196, 197, 186, 0.45);
+}
+
+.comparison-summary thead th {
+    color: var(--text-secondary);
+    font-weight: 760;
+}
+
+.comparison-summary tbody th {
+    color: var(--text-tertiary);
+    font-weight: 680;
 }
 
 .research-result-card {
     display: grid;
     align-content: start;
-    gap: 20px;
+    gap: 22px;
     min-width: 0;
     padding-top: 18px;
     border-top: 2px solid var(--accent);
+}
+
+.research-result-grid[data-result-mode="single"] .research-result-card {
+    max-width: 860px;
 }
 
 .research-result-card.is-loading,
@@ -981,7 +1026,11 @@ progress::-webkit-progress-value {
 .research-answer {
     white-space: pre-wrap;
     font-size: 15px;
-    line-height: 1.62;
+    line-height: 1.68;
+}
+
+.research-result-grid[data-result-mode="single"] .research-answer {
+    font-size: 16px;
 }
 
 .research-evidence-list {
@@ -1224,9 +1273,13 @@ progress::-webkit-progress-value {
         border-left: 0;
     }
 
-    .research-result-grid,
+    .research-result-grid[data-result-mode="compare"] .research-result-list,
     .method-selector {
         grid-template-columns: 1fr;
+    }
+
+    .research-result-grid[data-result-mode="single"] .research-result-card {
+        max-width: none;
     }
 
     .page-intro h1 {

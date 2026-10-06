@@ -40,7 +40,13 @@
                             >
                             <span class="research-document-main">
                                 <strong>{{ item.document.original_filename }}</strong>
-                                <small>{% if item.page_count %}{{ item.page_count }} pages{% else %}PDF document{% endif %}</small>
+                                <small>
+                                    {% if item.page_count %}{{ item.page_count }} pages{% else %}PDF document{% endif %}
+                                    <span aria-hidden="true">/</span>
+                                    Uploaded {{ item.document.created_at|date:"M d, Y H:i" }}
+                                    <span aria-hidden="true">/</span>
+                                    Ref {{ item.document.id }}
+                                </small>
                             </span>
                             {% include "components/status_badge.html" with tone=item.status_tone label=item.status_label %}
                         </label>

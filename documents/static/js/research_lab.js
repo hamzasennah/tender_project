@@ -18,7 +18,7 @@
             label: "RAPTOR",
             endpoint: "raptorUrl",
             loading: "Running RAPTOR...",
-            preparing: "Preparing hierarchical index...",
+            preparing: "Preparing RAPTOR index...",
             metadataKey: "raptor_metadata",
             evidenceLabel: "Sources",
         },
@@ -86,8 +86,11 @@
         if (Number.isFinite(metadata.response_time_ms)) {
             rows.push(["Server time", formatDuration(metadata.response_time_ms)]);
         }
-        if (Number.isFinite(context.context_char_count)) {
-            rows.push(["Context chars", String(context.context_char_count)]);
+        const contextCharCount = Number.isFinite(context.context_char_count)
+            ? context.context_char_count
+            : metadata.context_char_count;
+        if (Number.isFinite(contextCharCount)) {
+            rows.push(["Context chars", String(contextCharCount)]);
         }
         const tokenCount = context.context_token_count || context.estimated_context_token_count;
         if (Number.isFinite(tokenCount)) {
@@ -100,23 +103,64 @@
         return rows;
     }
 
+    function metricValue(rows, label) {
+        const row = rows.find(([name]) => name === label);
+        return row ? row[1] : "-";
+    }
+
+    function hasEvidence(methodKey, payload) {
+        return evidenceItems(methodKey, payload).length > 0;
+    }
+
+    function comparisonSummary(states) {
+        const methodKeys = ["pe", "rag", "raptor"];
+        const successful = methodKeys.filter((methodKey) => states[methodKey]?.status === "success");
+        if (successful.length < 2) return "";
+
+        const rows = [
+            ["Latency", (methodKey) => metricValue(metricRows(methodKey, states[methodKey].payload, states[methodKey].clientLatencyMs), "Latency")],
+            ["Context", (methodKey) => metricValue(metricRows(methodKey, states[methodKey].payload, states[methodKey].clientLatencyMs), "Context chars")],
+            ["Evidence", (methodKey) => hasEvidence(methodKey, states[methodKey].payload) ? "Yes" : "No"],
+        ];
+
+        return `
+            <section class="comparison-summary" aria-label="Comparison summary">
+                <table>
+                    <thead>
+                        <tr>
+                            <th scope="col">Metric</th>
+                            ${methodKeys.map((methodKey) => `<th scope="col">${escapeHtml(METHODS[methodKey].label)}</th>`).join("")}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(([label, valueFor]) => `
+                            <tr>
+                                <th scope="row">${escapeHtml(label)}</th>
+                                ${methodKeys.map((methodKey) => `<td>${states[methodKey]?.status === "success" ? escapeHtml(valueFor(methodKey)) : "-"}</td>`).join("")}
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </section>
+        `;
+    }
+
     function evidenceItems(methodKey, payload) {
         if (methodKey === "rag") {
             const evidence = Array.isArray(payload?.supporting_evidence) ? payload.supporting_evidence : [];
             return evidence.slice(0, 4).map((item) => ({
-                title: item.page ? `Page ${item.page}` : item.section || item.source || "Document excerpt",
-                detail: item.section || item.source || "Retrieved passage",
+                title: item.page ? `Page ${item.page}` : item.section ? item.section : "Retrieved passage",
+                detail: item.page && item.section ? item.section : "",
                 text: excerpt(item.text),
             })).filter((item) => item.text);
         }
         if (methodKey === "raptor") {
             const sources = Array.isArray(payload?.sources) ? payload.sources : [];
-            return sources.slice(0, 5).map((item) => ({
-                title: item.source || "RAPTOR source",
+            return sources.slice(0, 5).map((item, index) => ({
+                title: `Source ${index + 1}`,
                 detail: [
-                    item.node_type,
-                    Number.isFinite(item.level) ? `level ${item.level}` : "",
-                    Number.isFinite(item.chunk_index) ? `chunk ${item.chunk_index}` : "",
+                    item.node_type === "leaf" ? "Original passage" : "",
+                    Number.isFinite(item.level) ? `Level ${item.level}` : "",
                 ].filter(Boolean).join(" / "),
                 text: "",
             }));
@@ -190,7 +234,15 @@
         const placeholder = document.querySelector("[data-research-placeholder]");
         placeholder.hidden = true;
         results.hidden = false;
-        results.innerHTML = Object.entries(states).map(([methodKey, state]) => resultCard(methodKey, state)).join("");
+        const entries = Object.entries(states);
+        const mode = entries.length === 1 ? "single" : "compare";
+        results.dataset.resultMode = mode;
+        results.innerHTML = `
+            ${mode === "compare" ? comparisonSummary(states) : ""}
+            <div class="research-result-list">
+                ${entries.map(([methodKey, state]) => resultCard(methodKey, state)).join("")}
+            </div>
+        `;
     }
 
     async function ensureRaptorReady(documentInput, onStatus) {
@@ -206,7 +258,7 @@
         });
         if (isRaptorReady(currentStatus)) return currentStatus;
 
-        onStatus?.("Preparing embeddings for RAPTOR...");
+        onStatus?.(METHODS.raptor.preparing);
         await TenderApp.request(embeddingsUrl, {
             method: "POST",
             timeout: 180000,
