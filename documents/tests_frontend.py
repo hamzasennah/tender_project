@@ -240,6 +240,8 @@ class FrontendViewTests(TestCase):
         self.assertNotIn("evidenceFromSearch", analysis_contents)
         self.assertNotIn("workspace.dataset.searchUrl", analysis_contents)
         self.assertIn("#page=", analysis_contents)
+        self.assertIn("supported_claims", analysis_contents)
+        self.assertIn("Supports:", analysis_contents)
 
     def test_home_redirects_by_authentication_state(self):
         anonymous_response = self.client.get(reverse("home"))

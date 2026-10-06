@@ -33,6 +33,7 @@ from extraction.services.rag import (
     LLMProviderError,
     NOT_FOUND_ANSWER,
     _decompose_rag_question,
+    _extract_structured_claims,
 )
 from extraction.services.semantic_search import _best_fuzzy_chunk_score
 from extraction.services.raptor.clustering import cluster_embeddings
@@ -3040,6 +3041,284 @@ class TextExtractionAPITests(APITestCase):
             [chunks[1].id],
         )
         self.assertNotIn("text", response.data["sources"][0])
+
+    def test_rag_duration_claim_matches_french_duration(self):
+        self.assertEqual(
+            _extract_structured_claims("The validity period is 60 days."),
+            _extract_structured_claims("La periode de validite est de 60 jours."),
+        )
+
+    def test_rag_duration_claim_matches_ocr_spaced_digits(self):
+        self.assertIn(
+            ("duration", "60:day"),
+            _extract_structured_claims("La validite est de 6 0  jours."),
+        )
+
+    def test_rag_textual_percentage_matches_numeric_percentage(self):
+        self.assertEqual(
+            _extract_structured_claims("The bid security is three percent."),
+            _extract_structured_claims("La garantie est de 3 %."),
+        )
+
+    def test_rag_inverse_english_date_matches_document_date(self):
+        self.assertEqual(
+            _extract_structured_claims("Deadline: September 28, 2027 at 17:00."),
+            _extract_structured_claims("Date limite : 28 septembre 2027 a 17h00."),
+        )
+
+    def test_rag_factual_focus_retrieves_requested_structured_value(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Garantie de bonne execution : 10 % du prix du marche.",
+                "IS 15.1 Garantie d'offre : 3 % de la valeur estimee du marche.",
+                "Garantie technique : le seuil de disponibilite est de 80 %.",
+            ]
+        )
+        for index, chunk in enumerate(chunks):
+            self.create_chunk_embedding(chunk, basis_vector(index))
+        embedding_provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        llm_provider = FakeLLMProvider(
+            answer="The bid guarantee is 3% of the estimated market value."
+        )
+        self.authenticate()
+
+        response = self.run_rag_request(
+            document,
+            embedding_provider,
+            llm_provider,
+            question="What is the bid guarantee?",
+            top_k=2,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["answer"].startswith("The bid guarantee is 3%"))
+        evidence_text = " ".join(item["text"] for item in response.data["supporting_evidence"])
+        self.assertIn("Garantie d'offre", evidence_text)
+        self.assertIn("3 %", evidence_text)
+
+    def test_rag_multipart_two_facts_have_evidence_coverage(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Submission deadline: 15 May 2027 at 10:30.",
+                "Bid validity period: 45 days from submission deadline.",
+            ]
+        )
+        for index, chunk in enumerate(chunks):
+            self.create_chunk_embedding(chunk, basis_vector(index))
+        embedding_provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        llm_provider = FakeLLMProvider(
+            answer="Deadline: 15 May 2027 at 10:30. Validity: 45 days."
+        )
+        self.authenticate()
+
+        response = self.run_rag_request(
+            document,
+            embedding_provider,
+            llm_provider,
+            question="What are the submission deadline and bid validity period?",
+            top_k=2,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        evidence_text = " ".join(item["text"] for item in response.data["supporting_evidence"])
+        self.assertIn("15 May 2027", evidence_text)
+        self.assertIn("45 days", evidence_text)
+        self.assertEqual(response.data["rag_metadata"]["evidence"]["claim_support_coverage"], 1.0)
+
+    def test_rag_multipart_three_separate_chunks_remain_represented(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Submission deadline: 15 May 2027 at 10:30.",
+                "Bid validity period: 45 days from submission deadline.",
+                "Bid guarantee: 4 % of the estimated amount.",
+            ]
+        )
+        for index, chunk in enumerate(chunks):
+            self.create_chunk_embedding(chunk, basis_vector(index))
+        embedding_provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        llm_provider = FakeLLMProvider(
+            answer="Deadline: 15 May 2027 at 10:30. Validity: 45 days. Guarantee: 4%."
+        )
+        self.authenticate()
+
+        response = self.run_rag_request(
+            document,
+            embedding_provider,
+            llm_provider,
+            question="What are the submission deadline, bid validity period and bid guarantee?",
+            top_k=3,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        decomposition = response.data["rag_metadata"]["query_decomposition"]
+        self.assertTrue(decomposition["detected_multi_part"])
+        self.assertEqual(len(decomposition["subqueries"]), 3)
+        evidence_ids = {item["chunk_id"] for item in response.data["supporting_evidence"]}
+        self.assertSetEqual(evidence_ids, {chunk.id for chunk in chunks})
+
+    def test_rag_multipart_weak_subintent_is_not_evicted(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Submission deadline: 15 May 2027 at 10:30.",
+                "Many general procurement instructions without a concrete value.",
+                "Bid guarantee: 4 % of the estimated amount.",
+            ]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(0))
+        self.create_chunk_embedding(chunks[2], basis_vector(2))
+        embedding_provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        llm_provider = FakeLLMProvider(answer="Deadline: 15 May 2027 at 10:30. Guarantee: 4%.")
+        self.authenticate()
+
+        response = self.run_rag_request(
+            document,
+            embedding_provider,
+            llm_provider,
+            question="What are the submission deadline and bid guarantee?",
+            top_k=2,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        evidence_ids = {item["chunk_id"] for item in response.data["supporting_evidence"]}
+        self.assertIn(chunks[0].id, evidence_ids)
+        self.assertIn(chunks[2].id, evidence_ids)
+
+    def test_rag_evidence_uses_minimal_coverage_when_one_chunk_supports_all_claims(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Deadline: 15 May 2027 at 10:30. Validity: 45 days. Guarantee: 4 %.",
+                "General instructions without the requested values.",
+            ]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(1))
+        embedding_provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        llm_provider = FakeLLMProvider(
+            answer="Deadline: 15 May 2027 at 10:30. Validity: 45 days. Guarantee: 4%."
+        )
+        self.authenticate()
+
+        response = self.run_rag_request(
+            document,
+            embedding_provider,
+            llm_provider,
+            question="What are the deadline, validity and guarantee?",
+            top_k=2,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["supporting_evidence"]), 1)
+        self.assertEqual(response.data["supporting_evidence"][0]["chunk_id"], chunks[0].id)
+
+    def test_rag_unsupported_structured_claim_is_blocked(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            ["The document contains general submission instructions without a deadline."]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        embedding_provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        llm_provider = FakeLLMProvider(answer="The deadline is 15 May 2027 at 10:30.")
+        self.authenticate()
+
+        response = self.run_rag_request(
+            document,
+            embedding_provider,
+            llm_provider,
+            question="What is the deadline?",
+            top_k=1,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["answer"],
+            "The answer could not be fully verified in the document evidence.",
+        )
+        self.assertEqual(response.data["supporting_evidence"], [])
+        self.assertTrue(response.data["rag_metadata"]["evidence"]["unsupported_claim_blocked"])
+        self.assertEqual(response.data["rag_metadata"]["evidence"]["unsupported_claim_rate"], 1.0)
+
+    def test_rag_support_recovery_is_bounded_and_recovers_existing_claim(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "General topic overview for the procurement.",
+                "Bid validity period: 60 days from the submission deadline.",
+            ]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(1))
+        embedding_provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        llm_provider = FakeLLMProvider(answer="The bid validity period is 60 days.")
+        self.authenticate()
+
+        response = self.run_rag_request(
+            document,
+            embedding_provider,
+            llm_provider,
+            question="What is covered?",
+            top_k=1,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        recovery = response.data["rag_metadata"]["support_recovery"]
+        self.assertTrue(recovery["attempted"])
+        self.assertLessEqual(recovery["attempt_count"], 3)
+        self.assertEqual(recovery["recovered_claim_count"], 1)
+        self.assertIn("60 days", response.data["supporting_evidence"][0]["text"])
+
+    def test_rag_genuinely_unanswerable_keeps_not_found_without_evidence(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            ["The document describes delivery location only."]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        embedding_provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        llm_provider = FakeLLMProvider(answer=NOT_FOUND_ANSWER)
+        self.authenticate()
+
+        response = self.run_rag_request(
+            document,
+            embedding_provider,
+            llm_provider,
+            question="What is the bid validity period?",
+            top_k=1,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["answer"], NOT_FOUND_ANSWER)
+        self.assertEqual(response.data["supporting_evidence"], [])
+
+    def test_rag_simple_factual_remains_answered_inside_multipart(self):
+        document, _extraction_result, chunks = self.create_document_with_chunks(
+            [
+                "Submission deadline: 15 May 2027 at 10:30.",
+                "Bid guarantee: 4 % of the estimated amount.",
+            ]
+        )
+        self.create_chunk_embedding(chunks[0], basis_vector(0))
+        self.create_chunk_embedding(chunks[1], basis_vector(1))
+        embedding_provider = FakeEmbeddingProvider(vectors=lambda texts: [basis_vector(0)])
+        self.authenticate()
+
+        simple_response = self.run_rag_request(
+            document,
+            embedding_provider,
+            FakeLLMProvider(answer="The deadline is 15 May 2027 at 10:30."),
+            question="What is the submission deadline?",
+            top_k=1,
+        )
+        multipart_response = self.run_rag_request(
+            document,
+            embedding_provider,
+            FakeLLMProvider(answer="Deadline: 15 May 2027 at 10:30. Guarantee: 4%."),
+            question="What are the submission deadline and bid guarantee?",
+            top_k=2,
+        )
+
+        self.assertEqual(simple_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(multipart_response.status_code, status.HTTP_200_OK)
+        self.assertNotIn("not found", multipart_response.data["answer"].lower())
+        evidence_text = " ".join(item["text"] for item in multipart_response.data["supporting_evidence"])
+        self.assertIn("15 May 2027", evidence_text)
+        self.assertIn("4 %", evidence_text)
 
     def test_rag_simple_question_is_not_decomposed(self):
         document, _extraction_result, chunks = self.create_document_with_chunks(

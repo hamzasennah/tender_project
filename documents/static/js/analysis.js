@@ -44,6 +44,7 @@
             section: item.section || "Document excerpt",
             text: excerpt(item.text || ""),
             page: item.page,
+            supportedClaims: Array.isArray(item.supported_claims) ? item.supported_claims : [],
         })).filter((item) => item.text);
     }
 
@@ -71,6 +72,7 @@
                                 <strong>${escapeHtml(item.label)}</strong>
                                 <span>${escapeHtml(item.section)}</span>
                             </div>
+                            ${item.supportedClaims.length ? `<p class="evidence-support">Supports: ${escapeHtml(item.supportedClaims.join(", "))}</p>` : ""}
                             <blockquote>${escapeHtml(item.text)}</blockquote>
                             <a class="quiet-link evidence-link" href="${escapeHtml(evidenceLink(documentUrl, item))}">Open in document</a>
                         </article>
