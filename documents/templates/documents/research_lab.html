@@ -33,6 +33,8 @@
                                 data-document-url="{% url 'document-download' item.document.id %}"
                                 data-pe-url="{% url 'document-prompt-engineering-ask' item.document.id %}"
                                 data-rag-url="{% url 'document-rag-ask' item.document.id %}"
+                                data-embeddings-url="{% url 'document-chunk-embeddings' item.document.id %}"
+                                data-raptor-index-url="{% url 'document-raptor-index' item.document.id %}"
                                 data-raptor-url="{% url 'document-raptor-ask' item.document.id %}"
                                 {% if item.document.id == selected_document_id %}checked{% endif %}
                             >

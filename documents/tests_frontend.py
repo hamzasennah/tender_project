@@ -3,7 +3,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from documents.models import Document
-from extraction.models import ChunkEmbedding, TextChunk, TextExtractionResult
+from extraction.models import ChunkEmbedding, RaptorIndex, TextChunk, TextExtractionResult
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"])
@@ -218,6 +218,18 @@ class FrontendViewTests(TestCase):
         self.assertContains(response, f"{reverse('research-lab')}?document={document.id}")
         self.assertNotContains(response, "Compare methods")
 
+    def test_workspace_ready_does_not_require_raptor_index(self):
+        document = self.create_prepared_document(filename="rag-ready-without-raptor.pdf")
+        self.assertFalse(RaptorIndex.objects.filter(document=document).exists())
+        self.login()
+
+        response = self.client.get(reverse("web-document-detail", args=[document.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ready")
+        self.assertContains(response, "This document is ready for grounded questions.")
+        self.assertContains(response, "Open in Research Lab")
+
     def test_research_lab_requires_authentication(self):
         response = self.client.get(reverse("research-lab"))
 
@@ -240,8 +252,24 @@ class FrontendViewTests(TestCase):
         self.assertNotContains(response, "other-ready.pdf")
         self.assertContains(response, reverse("document-prompt-engineering-ask", args=[own_ready.id]))
         self.assertContains(response, reverse("document-rag-ask", args=[own_ready.id]))
+        self.assertContains(response, reverse("document-chunk-embeddings", args=[own_ready.id]))
+        self.assertContains(response, reverse("document-raptor-index", args=[own_ready.id]))
         self.assertContains(response, reverse("document-raptor-ask", args=[own_ready.id]))
         self.assertTemplateUsed(response, "documents/research_lab.html")
+
+    def test_research_lab_ready_document_without_raptor_exposes_lazy_preparation(self):
+        document = self.create_prepared_document(filename="needs-raptor.pdf")
+        self.assertFalse(RaptorIndex.objects.filter(document=document).exists())
+        self.login()
+
+        response = self.client.get(f"{reverse('research-lab')}?document={document.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "needs-raptor.pdf")
+        self.assertContains(response, "Ready")
+        self.assertContains(response, f'data-embeddings-url="{reverse("document-chunk-embeddings", args=[document.id])}"')
+        self.assertContains(response, f'data-raptor-index-url="{reverse("document-raptor-index", args=[document.id])}"')
+        self.assertContains(response, f'data-raptor-url="{reverse("document-raptor-ask", args=[document.id])}"')
 
     def test_research_lab_preselects_owned_document(self):
         first = self.create_prepared_document(filename="first.pdf")
@@ -268,6 +296,7 @@ class FrontendViewTests(TestCase):
         self.assertNotContains(response, "foreign.pdf")
         self.assertContains(response, f'value="{own_ready.id}"', html=False)
         self.assertNotContains(response, f'value="{foreign_ready.id}"', html=False)
+        self.assertNotContains(response, reverse("document-raptor-index", args=[foreign_ready.id]))
 
     def test_research_lab_exposes_method_selection_and_independent_compare(self):
         self.create_prepared_document(filename="ready.pdf")
@@ -294,15 +323,37 @@ class FrontendViewTests(TestCase):
         self.assertIn("Promise.allSettled", contents)
         self.assertIn('pe: { status: "loading" }', contents)
         self.assertIn('rag: { status: "loading" }', contents)
-        self.assertIn('raptor: { status: "loading" }', contents)
+        self.assertIn('raptor: { status: "loading", message: "Preparing RAPTOR artifacts..." }', contents)
         self.assertIn("endpoint: \"peUrl\"", contents)
         self.assertIn("endpoint: \"ragUrl\"", contents)
         self.assertIn("endpoint: \"raptorUrl\"", contents)
+        self.assertIn("ensureRaptorReady", contents)
+        self.assertIn("documentInput?.dataset?.embeddingsUrl", contents)
+        self.assertIn("documentInput?.dataset?.raptorIndexUrl", contents)
+        self.assertIn("Preparing embeddings for RAPTOR...", contents)
+        self.assertIn("Preparing hierarchical index...", contents)
+        self.assertIn("if (methodKey === \"raptor\")", contents)
+        self.assertIn("RAPTOR index is not ready.", contents)
         self.assertIn("No supporting passage exposed by this method.", contents)
         self.assertIn("Provider temporarily unavailable.", contents)
         self.assertNotIn("consensus", contents.lower())
         self.assertNotIn("winner", contents.lower())
         self.assertNotIn("best answer", contents.lower())
+
+    def test_research_lab_static_skips_raptor_build_when_index_is_ready(self):
+        with open("documents/static/js/research_lab.js", encoding="utf-8") as research_script:
+            contents = research_script.read()
+
+        self.assertIn('statusPayload?.status === "completed"', contents)
+        self.assertIn("if (isRaptorReady(currentStatus)) return currentStatus;", contents)
+
+    def test_research_lab_static_keeps_raptor_preparation_failure_isolated(self):
+        with open("documents/static/js/research_lab.js", encoding="utf-8") as research_script:
+            contents = research_script.read()
+
+        self.assertIn("Promise.allSettled", contents)
+        self.assertIn(": { status: \"error\", error: result.reason }", contents)
+        self.assertIn("Retry", contents)
 
     def test_frontend_static_translates_technical_errors(self):
         with open("documents/static/js/analysis.js", encoding="utf-8") as analysis_script:

@@ -18,6 +18,7 @@
             label: "RAPTOR",
             endpoint: "raptorUrl",
             loading: "Running RAPTOR...",
+            preparing: "Preparing hierarchical index...",
             metadataKey: "raptor_metadata",
             evidenceLabel: "Sources",
         },
@@ -60,6 +61,10 @@
 
     function endpointFor(documentInput, methodKey) {
         return documentInput?.dataset?.[METHODS[methodKey].endpoint];
+    }
+
+    function isRaptorReady(statusPayload) {
+        return statusPayload?.status === "completed";
     }
 
     function formatDuration(ms) {
@@ -143,7 +148,7 @@
             return `
                 <article class="research-result-card is-loading" data-method-result="${methodKey}">
                     <h3>${escapeHtml(method.label)}</h3>
-                    <p class="muted-copy">${escapeHtml(method.loading)}</p>
+                    <p class="muted-copy">${escapeHtml(state.message || method.loading)}</p>
                 </article>
             `;
         }
@@ -188,12 +193,45 @@
         results.innerHTML = Object.entries(states).map(([methodKey, state]) => resultCard(methodKey, state)).join("");
     }
 
-    async function runMethod(form, methodKey) {
+    async function ensureRaptorReady(documentInput, onStatus) {
+        const embeddingsUrl = documentInput?.dataset?.embeddingsUrl;
+        const raptorIndexUrl = documentInput?.dataset?.raptorIndexUrl;
+        if (!embeddingsUrl || !raptorIndexUrl) {
+            throw new Error("RAPTOR preparation endpoint is not available for this document.");
+        }
+
+        const currentStatus = await TenderApp.request(raptorIndexUrl, {
+            method: "GET",
+            timeout: 60000,
+        });
+        if (isRaptorReady(currentStatus)) return currentStatus;
+
+        onStatus?.("Preparing embeddings for RAPTOR...");
+        await TenderApp.request(embeddingsUrl, {
+            method: "POST",
+            timeout: 180000,
+        });
+
+        onStatus?.(METHODS.raptor.preparing);
+        const builtStatus = await TenderApp.request(raptorIndexUrl, {
+            method: "POST",
+            timeout: 240000,
+        });
+        if (!isRaptorReady(builtStatus)) {
+            throw new Error("RAPTOR index is not ready.");
+        }
+        return builtStatus;
+    }
+
+    async function runMethod(form, methodKey, onStatus) {
         const documentInput = selectedDocument(form);
         const question = form.elements.question.value.trim();
         const endpoint = endpointFor(documentInput, methodKey);
         if (!documentInput || !endpoint) {
             throw new Error("Select a ready document before running an analysis.");
+        }
+        if (methodKey === "raptor") {
+            await ensureRaptorReady(documentInput, onStatus);
         }
         const startedAt = performance.now();
         const payload = { question };
@@ -223,7 +261,9 @@
             }
             showResults(results, { [methodKey]: { status: "loading" } });
             try {
-                const state = await runMethod(form, methodKey);
+                const state = await runMethod(form, methodKey, (message) => {
+                    showResults(results, { [methodKey]: { status: "loading", message } });
+                });
                 showResults(results, { [methodKey]: state });
             } catch (error) {
                 showResults(results, { [methodKey]: { status: "error", error } });
@@ -245,9 +285,11 @@
             showResults(results, {
                 pe: { status: "loading" },
                 rag: { status: "loading" },
-                raptor: { status: "loading" },
+                raptor: { status: "loading", message: "Preparing RAPTOR artifacts..." },
             });
-            const settled = await Promise.allSettled(methods.map((methodKey) => runMethod(form, methodKey)));
+            const settled = await Promise.allSettled(
+                methods.map((methodKey) => runMethod(form, methodKey)),
+            );
             const states = {};
             settled.forEach((result, index) => {
                 states[methods[index]] = result.status === "fulfilled"
