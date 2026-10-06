@@ -125,6 +125,38 @@ def document_library(request):
 
 
 @login_required
+def research_lab(request):
+    documents = [_document_summary(document) for document in _document_queryset(request.user)]
+    research_documents = [summary for summary in documents if summary["is_ready"]]
+
+    selected_document_id = None
+    requested_document_id = request.GET.get("document")
+    if requested_document_id:
+        try:
+            requested_document_id = int(requested_document_id)
+        except (TypeError, ValueError):
+            requested_document_id = None
+        if requested_document_id and any(
+            item["document"].id == requested_document_id for item in research_documents
+        ):
+            selected_document_id = requested_document_id
+
+    if selected_document_id is None and research_documents:
+        selected_document_id = research_documents[0]["document"].id
+
+    return render(
+        request,
+        "documents/research_lab.html",
+        {
+            "active_nav": "research",
+            "page_title": "Research Lab",
+            "documents": research_documents,
+            "selected_document_id": selected_document_id,
+        },
+    )
+
+
+@login_required
 def document_workspace(request, document_id):
     document = get_object_or_404(_document_queryset(request.user), pk=document_id)
     summary = _document_summary(document)

@@ -114,19 +114,10 @@
             </details>
         </section>
 
-        <section class="overview-section research-panel">
-            <details>
-                <summary>Research comparison</summary>
-                <p class="muted-copy">For evaluation only. Compare the separate internal methods without changing the main document experience.</p>
-                <form data-compare-form class="compare-form">
-                    <label class="field">
-                        <span>Question</span>
-                        <input type="text" name="question" placeholder="Question for method comparison">
-                    </label>
-                    <button class="button button-secondary" type="submit">Compare methods</button>
-                </form>
-                <div class="compare-results" data-compare-results></div>
-            </details>
+        <section class="overview-section">
+            <h2>Research Lab</h2>
+            <p class="muted-copy">Compare Prompt Engineering, RAG and RAPTOR separately in the dedicated research workspace.</p>
+            <a class="button button-secondary" href="{% url 'research-lab' %}?document={{ document.id }}">Open in Research Lab</a>
         </section>
     </div>
 </section>

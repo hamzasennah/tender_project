@@ -20,6 +20,38 @@ flowchart TD
     RI --> RA[RAPTOR ask]
 ```
 
+## Deux espaces applicatifs
+
+La V1 distingue deux usages dans la meme application.
+
+### Business Workspace
+
+Le Workspace est l'espace metier principal. Il sert a faire le travail courant :
+
+1. upload PDF ;
+2. preparation automatique ;
+3. document pret ;
+4. question utilisateur ;
+5. reponse avec evidence du document.
+
+Dans cet espace, la strategie produit retenue reste masquee. L'utilisateur ne choisit pas Prompt Engineering, RAG ou RAPTOR : il pose une question et recoit une reponse ancree dans les passages disponibles.
+
+### Research Lab
+
+Le Research Lab est expose via :
+
+```text
+GET /research/
+```
+
+Il est authentifie et liste uniquement les documents exploitables appartenant a l'utilisateur courant. Il permet de tester independamment :
+
+- Prompt Engineering ;
+- RAG ;
+- RAPTOR.
+
+L'action `Compare all methods` execute les trois endpoints separement et affiche les resultats cote a cote. Elle ne vote pas, ne fusionne pas les reponses, ne produit pas de consensus et ne choisit pas de meilleure reponse.
+
 ## 1. Upload
 
 L'utilisateur authentifie envoie un PDF via `/api/documents/`.

@@ -144,50 +144,8 @@
         });
     }
 
-    function methodEndpoint(workspace, method) {
-        if (method === "pe") return workspace.dataset.peUrl;
-        if (method === "rag") return workspace.dataset.ragUrl;
-        return workspace.dataset.raptorUrl;
-    }
-
-    function initCompareMode() {
-        const workspace = document.querySelector("[data-document-workspace]");
-        const form = document.querySelector("[data-compare-form]");
-        const results = document.querySelector("[data-compare-results]");
-        if (!workspace || !form || !results) return;
-
-        form.addEventListener("submit", async (event) => {
-            event.preventDefault();
-            const question = form.elements.question.value.trim();
-            if (!question) return;
-            results.innerHTML = `<p class="muted-copy">Comparing methods...</p>`;
-            const methods = [
-                ["pe", "Prompt Engineering"],
-                ["rag", "RAG"],
-                ["raptor", "RAPTOR"],
-            ];
-            const cards = [];
-            for (const [key, label] of methods) {
-                try {
-                    const payload = { question };
-                    if (key !== "pe") payload.top_k = 5;
-                    const data = await TenderApp.request(methodEndpoint(workspace, key), {
-                        method: "POST",
-                        json: payload,
-                        timeout: 180000,
-                    });
-                    cards.push(`<article class="compare-card"><h3>${label}</h3><p>${escapeHtml(data.answer || "No answer returned.")}</p></article>`);
-                } catch (error) {
-                    cards.push(`<article class="compare-card"><h3>${label}</h3><p>${escapeHtml(friendlyError(error))}</p></article>`);
-                }
-            }
-            results.innerHTML = cards.join("");
-        });
-    }
-
     document.addEventListener("DOMContentLoaded", () => {
         initSuggestedQuestions();
         initAnalysis();
-        initCompareMode();
     });
 })();

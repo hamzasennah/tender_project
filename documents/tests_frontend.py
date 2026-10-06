@@ -214,7 +214,95 @@ class FrontendViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Ready")
         self.assertContains(response, "This document is ready for grounded questions.")
-        self.assertContains(response, "Research comparison")
+        self.assertContains(response, "Open in Research Lab")
+        self.assertContains(response, f"{reverse('research-lab')}?document={document.id}")
+        self.assertNotContains(response, "Compare methods")
+
+    def test_research_lab_requires_authentication(self):
+        response = self.client.get(reverse("research-lab"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response["Location"])
+        self.assertIn("next=/research/", response["Location"])
+
+    def test_research_lab_shows_only_owned_ready_documents(self):
+        own_ready = self.create_prepared_document(filename="own-ready.pdf")
+        self.create_document(filename="own-preparing.pdf")
+        self.create_prepared_document(owner=self.other_user, filename="other-ready.pdf")
+        self.login()
+
+        response = self.client.get(reverse("research-lab"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Research Lab")
+        self.assertContains(response, "own-ready.pdf")
+        self.assertNotContains(response, "own-preparing.pdf")
+        self.assertNotContains(response, "other-ready.pdf")
+        self.assertContains(response, reverse("document-prompt-engineering-ask", args=[own_ready.id]))
+        self.assertContains(response, reverse("document-rag-ask", args=[own_ready.id]))
+        self.assertContains(response, reverse("document-raptor-ask", args=[own_ready.id]))
+        self.assertTemplateUsed(response, "documents/research_lab.html")
+
+    def test_research_lab_preselects_owned_document(self):
+        first = self.create_prepared_document(filename="first.pdf")
+        second = self.create_prepared_document(filename="second.pdf")
+        self.login()
+
+        response = self.client.get(f"{reverse('research-lab')}?document={second.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'value="{second.id}"', html=False)
+        self.assertContains(response, f'value="{second.id}"\n                                data-document-name="second.pdf"', html=False)
+        self.assertContains(response, "checked")
+        self.assertContains(response, "first.pdf")
+
+    def test_research_lab_rejects_foreign_preselection(self):
+        own_ready = self.create_prepared_document(filename="own.pdf")
+        foreign_ready = self.create_prepared_document(owner=self.other_user, filename="foreign.pdf")
+        self.login()
+
+        response = self.client.get(f"{reverse('research-lab')}?document={foreign_ready.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "own.pdf")
+        self.assertNotContains(response, "foreign.pdf")
+        self.assertContains(response, f'value="{own_ready.id}"', html=False)
+        self.assertNotContains(response, f'value="{foreign_ready.id}"', html=False)
+
+    def test_research_lab_exposes_method_selection_and_independent_compare(self):
+        self.create_prepared_document(filename="ready.pdf")
+        self.login()
+
+        response = self.client.get(reverse("research-lab"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Prompt Engineering")
+        self.assertContains(response, "Full-document reasoning")
+        self.assertContains(response, "RAG")
+        self.assertContains(response, "Retrieval-grounded reasoning")
+        self.assertContains(response, "RAPTOR")
+        self.assertContains(response, "Hierarchical reasoning")
+        self.assertContains(response, "Run analysis")
+        self.assertContains(response, "Compare all methods")
+        self.assertNotContains(response, "Winner")
+        self.assertNotContains(response, "best answer")
+
+    def test_research_lab_static_invokes_three_methods_without_fusion(self):
+        with open("documents/static/js/research_lab.js", encoding="utf-8") as research_script:
+            contents = research_script.read()
+
+        self.assertIn("Promise.allSettled", contents)
+        self.assertIn('pe: { status: "loading" }', contents)
+        self.assertIn('rag: { status: "loading" }', contents)
+        self.assertIn('raptor: { status: "loading" }', contents)
+        self.assertIn("endpoint: \"peUrl\"", contents)
+        self.assertIn("endpoint: \"ragUrl\"", contents)
+        self.assertIn("endpoint: \"raptorUrl\"", contents)
+        self.assertIn("No supporting passage exposed by this method.", contents)
+        self.assertIn("Provider temporarily unavailable.", contents)
+        self.assertNotIn("consensus", contents.lower())
+        self.assertNotIn("winner", contents.lower())
+        self.assertNotIn("best answer", contents.lower())
 
     def test_frontend_static_translates_technical_errors(self):
         with open("documents/static/js/analysis.js", encoding="utf-8") as analysis_script:

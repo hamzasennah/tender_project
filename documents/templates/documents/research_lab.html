@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="page-intro research-intro">
+    <div>
+        <p class="kicker">Research Lab</p>
+        <h1>Research Lab</h1>
+        <p>Compare the extraction and reasoning strategies implemented in Tender Intelligence.</p>
+    </div>
+</section>
+
+<section class="research-layout" data-research-lab>
+    <form class="research-console" data-research-form>
+        <section class="research-step">
+            <div class="research-step-heading">
+                <span>1</span>
+                <div>
+                    <h2>Select document</h2>
+                    <p>Only ready documents from your account are available.</p>
+                </div>
+            </div>
+
+            {% if documents %}
+                <div class="research-document-list" role="radiogroup" aria-label="Research document">
+                    {% for item in documents %}
+                        <label class="research-document-option">
+                            <input
+                                type="radio"
+                                name="document"
+                                value="{{ item.document.id }}"
+                                data-document-name="{{ item.document.original_filename }}"
+                                data-document-url="{% url 'document-download' item.document.id %}"
+                                data-pe-url="{% url 'document-prompt-engineering-ask' item.document.id %}"
+                                data-rag-url="{% url 'document-rag-ask' item.document.id %}"
+                                data-raptor-url="{% url 'document-raptor-ask' item.document.id %}"
+                                {% if item.document.id == selected_document_id %}checked{% endif %}
+                            >
+                            <span class="research-document-main">
+                                <strong>{{ item.document.original_filename }}</strong>
+                                <small>{% if item.page_count %}{{ item.page_count }} pages{% else %}PDF document{% endif %}</small>
+                            </span>
+                            {% include "components/status_badge.html" with tone=item.status_tone label=item.status_label %}
+                        </label>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="notice-panel">
+                    <strong>No ready document available</strong>
+                    <p>Prepare a document from the Documents workspace before running method comparisons.</p>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="research-step">
+            <div class="research-step-heading">
+                <span>2</span>
+                <div>
+                    <h2>Ask a question</h2>
+                </div>
+            </div>
+            <label class="field">
+                <span class="sr-only">Question</span>
+                <textarea name="question" rows="4" placeholder="Ask the selected document..." required {% if not documents %}disabled{% endif %}></textarea>
+            </label>
+        </section>
+
+        <section class="research-step">
+            <div class="research-step-heading">
+                <span>3</span>
+                <div>
+                    <h2>Choose a method</h2>
+                </div>
+            </div>
+            <div class="method-selector" role="radiogroup" aria-label="Research method">
+                <label>
+                    <input type="radio" name="method" value="pe" {% if not documents %}disabled{% endif %}>
+                    <span><strong>Prompt Engineering</strong><small>Full-document reasoning</small></span>
+                </label>
+                <label>
+                    <input type="radio" name="method" value="rag" checked {% if not documents %}disabled{% endif %}>
+                    <span><strong>RAG</strong><small>Retrieval-grounded reasoning</small></span>
+                </label>
+                <label>
+                    <input type="radio" name="method" value="raptor" {% if not documents %}disabled{% endif %}>
+                    <span><strong>RAPTOR</strong><small>Hierarchical reasoning</small></span>
+                </label>
+            </div>
+        </section>
+
+        <div class="research-actions">
+            <button class="button button-primary" type="submit" data-run-method {% if not documents %}disabled{% endif %}>Run analysis</button>
+            <button class="button button-secondary" type="button" data-run-all {% if not documents %}disabled{% endif %}>Compare all methods</button>
+        </div>
+    </form>
+
+    <section class="research-results" aria-live="polite">
+        <div class="research-placeholder" data-research-placeholder>
+            <h2>Method results</h2>
+            <p>Select a document, ask a question, then run one method or compare all three independently.</p>
+        </div>
+        <div class="research-result-grid" data-research-results hidden></div>
+    </section>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/research_lab.js' %}"></script>
+{% endblock %}
